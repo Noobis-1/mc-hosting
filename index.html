@@ -28,13 +28,12 @@
         .dashboard-title { font-size: 22px; font-weight: bold; color: #fff; }
         
         .server-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-top: 10px; }
-        .server-item-card { background-color: #2b2b2b; border: 1px solid #3c3c3c; border-radius: 8px; padding: 15px; cursor: pointer; display: flex; flex-direction: column; gap: 10px; transition: 0.2s; position: relative; }
+        .server-item-card { background-color: #2b2b2b; border: 1px solid #3c3c3c; border-radius: 8px; padding: 20px; cursor: pointer; display: flex; flex-direction: column; gap: 10px; transition: 0.2s; position: relative; }
         .server-item-card:hover { border-color: #ffff00; transform: translateY(-2px); }
-        .server-card-top { display: flex; justify-content: space-between; align-items: center; }
+        .server-card-top { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         .server-card-name { font-size: 16px; font-weight: bold; color: #fff; }
         .server-card-status { width: 10px; height: 10px; border-radius: 50%; background-color: #4caf50; }
         .server-card-status.offline { background-color: #ff5252; }
-        .server-card-sub { font-size: 11px; color: #888; word-break: break-all; }
 
         /* Main Panel Wrapper */
         #mainPanelWrapper { display: none; width: 100%; height: 100%; }
@@ -138,6 +137,7 @@
 </head>
 <body>
 
+    <!-- 로그인 화면 -->
     <div id="loginWrapper">
         <div class="login-card">
             <div class="login-title"><i class="fa-solid fa-server"></i> Server Panel 로그인</div>
@@ -154,10 +154,12 @@
         </div>
     </div>
 
+    <!-- 서버 선택 대시보드 화면 -->
     <div id="serverListWrapper" style="display: none;">
         <div class="dashboard-sidebar">
             <div class="sidebar-top-group">
                 <div class="sidebar-top" onclick="goToServerList()"><i class="fa-solid fa-server"></i> 서버</div>
+                <!-- syhblack1@gmail.com 계정에게만 표시되는 글로벌 계정 관리 메뉴 -->
                 <div id="globalUserManageMenu" class="sidebar-menu-item" onclick="openGlobalUserModal()" style="display: none;">
                     <i class="fa-solid fa-user-gear"></i> 계정 관리
                 </div>
@@ -169,13 +171,16 @@
         <div class="dashboard-main">
             <div class="dashboard-header-row">
                 <div class="dashboard-title">서버 목록</div>
+                <!-- syhblack1@gmail.com 계정에게만 보이는 서버 추가 버튼 -->
                 <button id="createServerBtn" class="btn-custom btn-success" style="margin-top:0; display: none;" onclick="createNewServerPrompt()">+ 서버 추가</button>
             </div>
             <div id="serverCardGrid" class="server-card-grid"></div>
         </div>
     </div>
 
+    <!-- 메인 패널 화면 (개별 서버 콘솔/파일 등) -->
     <div id="mainPanelWrapper" style="display: none; width: 100%; height: 100%;">
+        <!-- Left Sidebar -->
         <div class="sidebar">
             <div class="sidebar-top-group">
                 <div class="sidebar-top" onclick="goToServerList()"><i class="fa-solid fa-arrow-left"></i> 서버 목록으로</div>
@@ -185,13 +190,15 @@
             </div>
         </div>
 
+        <!-- Main Container -->
         <div class="main-wrapper">
             <div class="panel-card">
                 
+                <!-- Header -->
                 <div class="card-header">
                     <div class="server-name-box">
                         <div class="status-dot" id="statusDot"><i class="fa-solid fa-play" id="statusDotIcon"></i></div>
-                        <input type="text" id="serverTitle" class="server-title" value="noobis" title="클릭하여 서버 이름 변경" oninput="syncServerTitle(this.value)">
+                        <input type="text" id="serverTitle" class="server-title" value="" title="클릭하여 서버 이름 변경" oninput="syncServerTitle(this.value)">
                     </div>
                     <div class="header-actions">
                         <button class="action-btn start" id="startBtn" onclick="startServer()" title="서버 시작"><i class="fa-solid fa-play"></i></button>
@@ -201,6 +208,7 @@
                     </div>
                 </div>
 
+                <!-- Navigation Tabs -->
                 <div class="nav-tabs">
                     <div class="tab-item active" onclick="showTab('console', this)"><i class="fa-solid fa-terminal"></i>콘솔</div>
                     <div class="tab-item" onclick="showTab('stats', this)"><i class="fa-solid fa-chart-line"></i>통계</div>
@@ -211,8 +219,10 @@
                     <div class="tab-item" onclick="showTab('backup', this)"><i class="fa-solid fa-rotate-left"></i>Backup</div>
                 </div>
 
+                <!-- Main Content Area -->
                 <div class="content-body">
                     
+                    <!-- 1. 콘솔 탭 -->
                     <div id="page-console" class="tab-page active">
                         <div id="console"></div>
                         <div class="command-bar">
@@ -223,6 +233,7 @@
                         </div>
                     </div>
 
+                    <!-- 2. 통계 탭 -->
                     <div id="page-stats" class="tab-page">
                         <div class="tab-padded">
                             <h3>📊 실시간 서버 성능 통계</h3>
@@ -247,6 +258,7 @@
                         </div>
                     </div>
 
+                    <!-- 3. 파일 탭 -->
                     <div id="page-files" class="tab-page">
                         <div class="tab-padded">
                             <div class="section-box">
@@ -275,12 +287,13 @@
                         </div>
                     </div>
 
+                    <!-- 4. 설정 탭 -->
                     <div id="page-settings" class="tab-page">
                         <div class="tab-padded">
                             <div class="section-box">
                                 <h3>⚙️ 서버 기본 설정</h3>
                                 <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">서버 이름</label>
-                                <input type="text" id="settingServerName" class="input-text" value="noobis" oninput="syncServerTitle(this.value)">
+                                <input type="text" id="settingServerName" class="input-text" value="" oninput="syncServerTitle(this.value)">
                                 
                                 <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">마크 버전 (직접 입력)</label>
                                 <input type="text" id="settingServerVersion" class="input-text" placeholder="예: 26.2" value="26.2">
@@ -299,6 +312,7 @@
                         </div>
                     </div>
 
+                    <!-- 5. 사용자 탭 (현재 서버 접근 권한 관리) -->
                     <div id="page-users" class="tab-page">
                         <div class="tab-padded">
                             <div class="section-box">
@@ -318,8 +332,10 @@
                         </div>
                     </div>
 
+                    <!-- 6. SFTP 탭 -->
                     <div id="page-sftp" class="tab-page"><div class="tab-padded"><h3>🔌 SFTP 접속 정보</h3></div></div>
 
+                    <!-- 7. Backup 탭 -->
                     <div id="page-backup" class="tab-page">
                         <div class="tab-padded">
                             <div class="section-box">
@@ -341,10 +357,11 @@
         </div>
     </div>
 
+    <!-- 글로벌 계정 관리 모달 (syhblack1@gmail.com 전용) -->
     <div class="modal" id="globalUserModal">
         <div class="modal-content">
             <div class="modal-header">
-                <span>사용자 계정 생성 및 관리</span>
+                <span>사용자 계정 생성 및 관리 (우클릭 메뉴 활용)</span>
                 <span class="close-btn" onclick="closeGlobalUserModal()">&times;</span>
             </div>
             <div>
@@ -357,11 +374,23 @@
             </div>
             <button class="btn-custom btn-success" style="margin-top: 15px;" onclick="registerNewAccount()">계정 저장 및 추가</button>
             
-            <h3 style="margin-top: 20px; font-size:14px;">등록된 사용자 계정 목록</h3>
+            <h3 style="margin-top: 20px; font-size:14px;">등록된 사용자 계정 목록 (우클릭시 [비밀번호 변경, 삭제] 가능)</h3>
             <div id="globalUserListContainer" style="margin-top: 10px; max-height: 150px; overflow-y: auto;"></div>
         </div>
     </div>
 
+    <!-- 서버 카드 우클릭 메뉴 -->
+    <div class="context-menu" id="serverContextMenu">
+        <div class="context-menu-item danger" onclick="deleteServerItem()"><i class="fa-solid fa-trash"></i> 삭제</div>
+    </div>
+
+    <!-- 글로벌 계정 우클릭 메뉴 -->
+    <div class="context-menu" id="accountContextMenu">
+        <div class="context-menu-item" onclick="changeAccountPassword()"><i class="fa-solid fa-key"></i> 비밀번호 변경</div>
+        <div class="context-menu-item danger" onclick="deleteAccountItem()"><i class="fa-solid fa-trash"></i> 삭제</div>
+    </div>
+
+    <!-- 일반 파일 우클릭 메뉴 -->
     <div class="context-menu" id="contextMenu">
         <div class="context-menu-item" onclick="renameFile()"><i class="fa-solid fa-pen"></i> 이름 수정</div>
         <div class="context-menu-item" onclick="compressFile()"><i class="fa-solid fa-file-zipper"></i> 압축 (.zip)</div>
@@ -369,12 +398,14 @@
         <div class="context-menu-item danger" onclick="deleteFile()"><i class="fa-solid fa-trash"></i> 삭제</div>
     </div>
 
+    <!-- 백업 전용 우클릭 컨텍스트 메뉴 -->
     <div class="context-menu" id="backupContextMenu">
         <div class="context-menu-item" onclick="restoreBackup()"><i class="fa-solid fa-rotate-left"></i> 불러오기</div>
         <div class="context-menu-item" onclick="downloadBackup()"><i class="fa-solid fa-download"></i> 다운로드</div>
         <div class="context-menu-item danger" onclick="deleteBackup()"><i class="fa-solid fa-trash"></i> 삭제</div>
     </div>
 
+    <!-- 파일 열기 모달 팝업창 -->
     <div class="modal" id="fileModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -396,12 +427,8 @@
             "syhblack1@gmail.com": "admin1234"
         };
 
-        // 서버 목록 데이터 (서버별로 접근 권한 users 배열 보유)
-        let servers = [
-            { id: "kimglin", name: "kimglin", running: false, users: ["syhblack1@gmail.com"], fs: { "/": [] }, cache: {}, backups: [] },
-            { id: "noobis", name: "noobis", running: true, users: ["syhblack1@gmail.com"], fs: { "/": [] }, cache: {}, backups: [] },
-            { id: "noobis_dead", name: "noobis_dead", running: false, users: ["syhblack1@gmail.com"], fs: { "/": [] }, cache: {}, backups: [] }
-        ];
+        // 처음에는 서버 목록이 비어있음
+        let servers = [];
 
         let currentLoggedInEmail = "";
         let currentServer = null;
@@ -410,6 +437,8 @@
         let selectedTargetElement = null;
         let selectedFileName = "";
         let selectedBackupName = "";
+        let selectedServerId = "";
+        let selectedAccountEmail = "";
         let ws = null;
 
         function handleLoginKeyPress(e) {
@@ -465,24 +494,23 @@
             const grid = document.getElementById('serverCardGrid');
             grid.innerHTML = "";
 
-            // 현재 로그인한 계정이 접근 권한이 있는 서버만 필터링 (단, syhblack1은 모두 보기 가능)
             const availableServers = servers.filter(s => currentLoggedInEmail === ADMIN_EMAIL || s.users.includes(currentLoggedInEmail));
 
             if (availableServers.length === 0) {
-                grid.innerHTML = "<span style='color:#777; font-size:13px;'>접근 가능한 서버가 없습니다.</span>";
+                grid.innerHTML = "<span style='color:#777; font-size:13px;'>생성된 서버가 없습니다. 상단의 '+ 서버 추가' 버튼을 눌러 서버를 생성하세요.</span>";
                 return;
             }
 
             availableServers.forEach(srv => {
                 const card = document.createElement('div');
                 card.className = 'server-item-card';
+                card.setAttribute('data-serverid', srv.id);
                 card.onclick = () => openServerPanel(srv.id);
                 card.innerHTML = `
                     <div class="server-card-top">
                         <span class="server-card-name">${srv.name}</span>
                         <div class="server-card-status ${srv.running ? '' : 'offline'}"></div>
                     </div>
-                    <span class="server-card-sub">puffer.madscientist.n-e.kr:${Math.floor(Math.random()*10000)+20000} @ LocalNode</span>
                 `;
                 grid.appendChild(card);
             });
@@ -506,6 +534,15 @@
             });
             renderServerCardGrid();
             alert(`서버 '${srvName}'이(가) 추가되었습니다.`);
+        }
+
+        function deleteServerItem() {
+            hideAllContextMenus();
+            if (!selectedServerId) return;
+            if (confirm(`정말로 서버 '${selectedServerId}'을(를) 삭제하시겠습니까?`)) {
+                servers = servers.filter(s => s.id !== selectedServerId);
+                renderServerCardGrid();
+            }
         }
 
         function openServerPanel(serverId) {
@@ -704,12 +741,45 @@
             Object.keys(userAccounts).forEach(email => {
                 const row = document.createElement('div');
                 row.className = 'user-row';
+                row.setAttribute('data- acc-email', email);
                 row.innerHTML = `
-                    <span>${email}</span>
-                    <span style="color: #888; font-size:12px;">비밀번호 등록됨</span>
+                    <span>${email} ${email === ADMIN_EMAIL ? '(기본 관리자)' : ''}</span>
+                    <span style="color: #888; font-size:12px;">우클릭하여 관리</span>
                 `;
+                // 행 자체에 우클릭 이벤트 부착
+                row.oncontextmenu = (e) => {
+                    e.preventDefault();
+                    hideAllContextMenus();
+                    selectedAccountEmail = email;
+                    const menu = document.getElementById('accountContextMenu');
+                    menu.style.top = `${e.pageY}px`;
+                    menu.style.left = `${e.pageX}px`;
+                    menu.style.display = 'block';
+                };
                 container.appendChild(row);
             });
+        }
+
+        function changeAccountPassword() {
+            hideAllContextMenus();
+            if (!selectedAccountEmail) return;
+            const newPw = prompt(`'${selectedAccountEmail}' 계정의 새 비밀번호를 입력하세요:`);
+            if (newPw) {
+                userAccounts[selectedAccountEmail] = newPw;
+                alert("비밀번호가 성공적으로 변경되었습니다.");
+            }
+        }
+
+        function deleteAccountItem() {
+            hideAllContextMenus();
+            if (!selectedAccountEmail) return;
+            if (selectedAccountEmail === ADMIN_EMAIL) {
+                return alert("기본 관리자 계정은 삭제할 수 없습니다.");
+            }
+            if (confirm(`정말로 계정 '${selectedAccountEmail}'을(를) 삭제하시겠습니까?`)) {
+                delete userAccounts[selectedAccountEmail];
+                renderGlobalUserList();
+            }
         }
 
         function createBackup() {
@@ -887,17 +957,29 @@
 
         const contextMenu = document.getElementById('contextMenu');
         const backupContextMenu = document.getElementById('backupContextMenu');
+        const serverContextMenu = document.getElementById('serverContextMenu');
+        const accountContextMenu = document.getElementById('accountContextMenu');
 
         function hideAllContextMenus() {
             contextMenu.style.display = 'none';
             backupContextMenu.style.display = 'none';
+            serverContextMenu.style.display = 'none';
+            accountContextMenu.style.display = 'none';
         }
 
         document.addEventListener('contextmenu', (e) => {
+            const serverCard = e.target.closest('.server-item-card');
             const fileCard = e.target.closest('#page-files .file-card');
             const backupCard = e.target.closest('#backupGrid .file-card');
 
-            if (fileCard) {
+            if (serverCard) {
+                e.preventDefault();
+                hideAllContextMenus();
+                selectedServerId = serverCard.getAttribute('data-serverid');
+                serverContextMenu.style.top = `${e.pageY}px`;
+                serverContextMenu.style.left = `${e.pageX}px`;
+                serverContextMenu.style.display = 'block';
+            } else if (fileCard) {
                 e.preventDefault();
                 hideAllContextMenus();
                 selectedFileName = fileCard.getAttribute('data-filename');
