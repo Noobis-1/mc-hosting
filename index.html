@@ -6,6 +6,11 @@
     <title>Server Panel - Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <!-- Xterm.js 스타일 및 라이브러리 추가 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #1e1e1e; color: #d4d4d4; height: 100vh; display: flex; overflow: hidden; }
@@ -78,18 +83,12 @@
         .tab-item.active { color: #fff; font-weight: bold; }
 
         /* Content Body */
-        .content-body { padding: 0; background-color: #000; flex: 1; display: flex; flex-direction: column; }
+        .content-body { padding: 0; background-color: #000; flex: 1; display: flex; flex-direction: column; height: 470px; }
         .tab-page { display: none; }
         .tab-page.active { display: flex; flex-direction: column; flex: 1; }
 
-        #console { height: 420px; padding: 15px; overflow-y: auto; font-family: 'Consolas', 'Courier New', monospace; font-size: 13px; color: #ffffff; line-height: 1.4; white-space: pre-wrap; word-break: break-all; }
-
-        /* Bottom Command Input */
-        .command-bar { display: flex; align-items: center; background-color: #2b2b2b; padding: 12px 20px; gap: 10px; }
-        .command-input-wrapper { flex: 1; background-color: #222; border: 1px solid #444; border-radius: 20px; padding: 6px 15px; display: flex; align-items: center; }
-        .command-input { width: 100%; background: transparent; border: none; outline: none; color: #fff; font-size: 13px; }
-        .send-btn { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; }
-        .send-btn:hover { color: #ffff00; }
+        /* Xterm 영역 스타일 */
+        #terminal-container { width: 100%; height: 100%; padding: 10px; background-color: #000; }
 
         /* Manager Styles */
         .tab-padded { padding: 25px; background-color: #222; color: #fff; min-height: 400px; }
@@ -213,14 +212,9 @@
                 </div>
 
                 <div class="content-body">
+                    <!-- Xterm.js 콘솔 화면 영역 -->
                     <div id="page-console" class="tab-page active">
-                        <div id="console"></div>
-                        <div class="command-bar">
-                            <div class="command-input-wrapper">
-                                <input type="text" id="cmdInput" class="command-input" placeholder="Command" onkeypress="handleKeyPress(event)">
-                            </div>
-                            <button class="send-btn" onclick="sendCommand()"><i class="fa-solid fa-paper-plane"></i></button>
-                        </div>
+                        <div id="terminal-container"></div>
                     </div>
 
                     <div id="page-stats" class="tab-page">
@@ -403,7 +397,6 @@
         const ADMIN_EMAIL = "syhblack1@gmail.com";
         const SESSION_DURATION = 60 * 60 * 1000; // 1시간 (밀리초)
         
-        // localStorage에서 계정 정보 불러오기 (없으면 기본값 설정 및 저장)
         let userAccounts = JSON.parse(localStorage.getItem('serverPanel_userAccounts')) || {
             "syhblack1@gmail.com": "admin1234"
         };
@@ -411,7 +404,6 @@
             localStorage.setItem('serverPanel_userAccounts', JSON.stringify(userAccounts));
         }
 
-        // localStorage에서 서버 목록 정보 불러오기 (없으면 빈 배열 또는 초기 서버 설정)
         let servers = JSON.parse(localStorage.getItem('serverPanel_servers')) || [];
         function saveServersToStorage() {
             localStorage.setItem('serverPanel_servers', JSON.stringify(servers));
@@ -427,8 +419,10 @@
         let selectedServerId = "";
         let selectedAccountEmail = "";
         let ws = null;
+        
+        // Xterm.js 인스턴스 전역 변수
+        let term = null;
 
-        // 페이지 로드 시 세션(로그인 시간) 검사 수행
         window.addEventListener('DOMContentLoaded', () => {
             checkSessionExpiration();
         });
@@ -439,9 +433,8 @@
 
             if (loginTime && savedEmail) {
                 const now = new Date().getTime();
-                // 1시간이 지났는지 검사
                 if (now - parseInt(loginTime) > SESSION_DURATION) {
-                    logout(true); // 1시간 경과로 인한 자동 로그아웃
+                    logout(true);
                 } else {
                     currentLoggedInEmail = savedEmail;
                     applyLoginState();
@@ -478,8 +471,6 @@
             }
 
             currentLoggedInEmail = email;
-            
-            // 로그인 성공 시각 및 이메일 저장 (1시간 세션 관리용)
             localStorage.setItem('serverPanel_loginTime', new Date().getTime().toString());
             localStorage.setItem('serverPanel_loggedEmail', email);
 
@@ -491,7 +482,6 @@
                 if (ws) ws.close();
                 currentServer = null;
                 
-                // 로그인 세션 정보 삭제
                 localStorage.removeItem('serverPanel_loginTime');
                 localStorage.removeItem('serverPanel_loggedEmail');
 
@@ -505,7 +495,6 @@
         }
 
         function goToServerList() {
-            // 매번 이동하거나 동작할 때 세션 만료 시간 체크
             const loginTime = localStorage.getItem('serverPanel_loginTime');
             if (loginTime && (new Date().getTime() - parseInt(loginTime) > SESSION_DURATION)) {
                 logout(true);
@@ -579,7 +568,6 @@
         }
 
         function openServerPanel(serverId) {
-            // 패널 열 때도 세션 만료 체크
             const loginTime = localStorage.getItem('serverPanel_loginTime');
             if (loginTime && (new Date().getTime() - parseInt(loginTime) > SESSION_DURATION)) {
                 logout(true);
@@ -597,12 +585,36 @@
             document.getElementById('settingServerVersion').value = currentServer.version || "26.2";
             document.getElementById('settingJavaVersion').value = currentServer.javaVersion || "java 25";
 
-            document.getElementById('console').textContent = currentServer.logHistory || "";
-
             initPanel();
         }
 
         function initPanel() {
+            // Xterm.js 터미널 초기화
+            const termContainer = document.getElementById('terminal-container');
+            termContainer.innerHTML = ""; // 기존 터미널 초기화 방지용 비우기
+
+            term = new Terminal({
+                cursorBlink: true,
+                theme: {
+                    background: '#000000',
+                    foreground: '#ffffff',
+                    cursor: '#ffff00'
+                }
+            });
+            term.open(termContainer);
+
+            // 기존 로그 히스토리 복원 출력
+            if (currentServer.logHistory) {
+                term.write(currentServer.logHistory);
+            }
+
+            // 사용자가 터미널에 키를 입력했을 때 웹소켓으로 전송
+            term.onData(data => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(data);
+                }
+            });
+
             ws = new WebSocket(WS_URL);
 
             ws.onopen = () => {};
@@ -628,14 +640,12 @@
             setServerState(currentServer.running);
         }
 
-        const consoleElem = document.getElementById('console');
-
         function appendLog(text) {
-            if (!consoleElem) return;
-            consoleElem.textContent += text;
-            consoleElem.scrollTop = consoleElem.scrollHeight;
+            if (term) {
+                term.write(text);
+            }
             if (currentServer) {
-                currentServer.logHistory = consoleElem.textContent;
+                currentServer.logHistory = (currentServer.logHistory || "") + text;
                 saveServersToStorage();
             }
         }
@@ -688,33 +698,33 @@
         function startServer() {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send("start");
-                appendLog("[SYSTEM] 서버 시작 명령을 전송했습니다.\n");
+                appendLog("[SYSTEM] 서버 시작 명령을 전송했습니다.\r\n");
                 currentServer.running = true;
                 setServerState(true);
                 saveServersToStorage();
             } else {
-                appendLog("[SYSTEM] 서버에 연결되어 있지 않습니다.\n");
+                appendLog("[SYSTEM] 서버에 연결되어 있지 않습니다.\r\n");
             }
         }
 
         function stopServer() {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send("stop");
-                appendLog("[SYSTEM] 서버 정지 명령을 전송했습니다.\n");
+                appendLog("[SYSTEM] 서버 정지 명령을 전송했습니다.\r\n");
                 currentServer.running = false;
                 setServerState(false);
                 saveServersToStorage();
             } else {
-                appendLog("[SYSTEM] 서버에 연결되어 있지 않아 정지 명령을 보낼 수 없습니다.\n");
+                appendLog("[SYSTEM] 서버에 연결되어 있지 않아 정지 명령을 보낼 수 없습니다.\r\n");
             }
         }
 
         function restartServer() {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send("restart");
-                appendLog("[SYSTEM] 서버 재시작 명령을 전송했습니다.\n");
+                appendLog("[SYSTEM] 서버 재시작 명령을 전송했습니다.\r\n");
             } else {
-                appendLog("[SYSTEM] 서버에 연결되어 있지 않아 재시작 명령을 보낼 수 없습니다.\n");
+                appendLog("[SYSTEM] 서버에 연결되어 있지 않아 재시작 명령을 보낼 수 없습니다.\r\n");
             }
         }
 
@@ -973,17 +983,12 @@
             
             el.classList.add('active');
             document.getElementById(`page-${tabName}`).classList.add('active');
-        }
 
-        function handleKeyPress(e) {
-            if (e.key === 'Enter') sendCommand();
-        }
-
-        function sendCommand() {
-            const input = document.getElementById('cmdInput');
-            if (input.value.trim() !== "") {
-                ws.send(input.value);
-                input.value = "";
+            // 콘솔 탭으로 돌아왔을 때 크기가 깨지는 현상을 막기 위해 터미널 리프레시 수행
+            if (tabName === 'console' && term) {
+                setTimeout(() => {
+                    term.refresh(0, term.rows - 1);
+                }, 50);
             }
         }
 
