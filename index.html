@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
-    <!-- Xterm.js 스타일 및 라이브러리 추가 -->
+    <!-- Xterm.js 스타일 및 라이브러리 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
 
@@ -420,8 +420,9 @@
         let selectedAccountEmail = "";
         let ws = null;
         
-        // Xterm.js 인스턴스 전역 변수
+        // Xterm.js 인스턴스 및 입력 버퍼 관리 변수
         let term = null;
+        let commandInputBuffer = "";
 
         window.addEventListener('DOMContentLoaded', () => {
             checkSessionExpiration();
@@ -589,9 +590,8 @@
         }
 
         function initPanel() {
-            // Xterm.js 터미널 초기화
             const termContainer = document.getElementById('terminal-container');
-            termContainer.innerHTML = ""; // 기존 터미널 초기화 방지용 비우기
+            termContainer.innerHTML = ""; 
 
             term = new Terminal({
                 cursorBlink: true,
@@ -608,19 +608,44 @@
                 term.write(currentServer.logHistory);
             }
 
-            // 사용자가 터미널에 키를 입력했을 때 웹소켓으로 전송
+            commandInputBuffer = "";
+
+            // Xterm.js 키 입력 이벤트 처리 (cmd처럼 타이핑, 백스페이스, 엔터 구현)
             term.onData(data => {
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(data);
+                const code = data.charCodeAt(0);
+
+                if (code === 13) { // Enter 키
+                    term.write('\r\n');
+                    const cmd = commandInputBuffer.trim();
+                    if (cmd) {
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(cmd);
+                        } else {
+                            appendLog(`[SYSTEM] 웹소켓 미연결 상태: ${cmd}\r\n`);
+                        }
+                    }
+                    commandInputBuffer = "";
+                    term.write('> ');
+                } else if (code === 127 || code === 8) { // Backspace 키
+                    if (commandInputBuffer.length > 0) {
+                        commandInputBuffer = commandInputBuffer.slice(0, -1);
+                        term.write('\b \b'); // 커서 앞으로 이동 후 공백 출력 후 다시 커서 이동
+                    }
+                } else if (code >= 32) { // 일반 타이핑 글자
+                    commandInputBuffer += data;
+                    term.write(data); // 화면에 글자 출력
                 }
             });
+
+            // 초기 프롬프트 출력
+            term.write('> ');
 
             ws = new WebSocket(WS_URL);
 
             ws.onopen = () => {};
             ws.onmessage = (event) => { 
                 const msg = event.data;
-                appendLog(msg);
+                appendLog(msg + '\r\n');
                 
                 if (msg.includes("Stopping the server") || msg.includes("Server stopped")) {
                     currentServer.running = false;
@@ -642,7 +667,10 @@
 
         function appendLog(text) {
             if (term) {
+                // 현재 입력 중이던 버퍼를 지우고 로그를 출력한 뒤 다시 프롬프트와 버퍼를 복원
+                term.write('\r\x1b[K'); 
                 term.write(text);
+                term.write('> ' + commandInputBuffer);
             }
             if (currentServer) {
                 currentServer.logHistory = (currentServer.logHistory || "") + text;
@@ -984,7 +1012,6 @@
             el.classList.add('active');
             document.getElementById(`page-${tabName}`).classList.add('active');
 
-            // 콘솔 탭으로 돌아왔을 때 크기가 깨지는 현상을 막기 위해 터미널 리프레시 수행
             if (tabName === 'console' && term) {
                 setTimeout(() => {
                     term.refresh(0, term.rows - 1);
