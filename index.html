@@ -285,7 +285,7 @@
                                 <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">Java 버전 (직접 입력)</label>
                                 <input type="text" id="settingJavaVersion" class="input-text" placeholder="예: java 25" value="java 25">
                                 
-                                <button class="btn-custom" style="margin-top:15px;" onclick="alert('설정이 저장되었습니다.')">설정 저장</button>
+                                <button class="btn-custom" style="margin-top:15px;" onclick="saveServerSettings()">설정 저장</button>
                             </div>
 
                             <div class="section-box" style="border-bottom: none;">
@@ -396,16 +396,20 @@
         const WS_URL = "wss://mc-hosting-6fri.onrender.com";
         const ADMIN_EMAIL = "syhblack1@gmail.com";
         
-        // localStorage에서 계정 정보를 불러오거나 없으면 기본값 설정
+        // localStorage에서 계정 정보 불러오기 (없으면 기본값 설정 및 저장)
         let userAccounts = JSON.parse(localStorage.getItem('serverPanel_userAccounts')) || {
             "syhblack1@gmail.com": "admin1234"
         };
-
         function saveAccountsToStorage() {
             localStorage.setItem('serverPanel_userAccounts', JSON.stringify(userAccounts));
         }
 
-        let servers = [];
+        // localStorage에서 서버 목록 정보 불러오기 (없으면 빈 배열 또는 초기 서버 설정)
+        let servers = JSON.parse(localStorage.getItem('serverPanel_servers')) || [];
+        function saveServersToStorage() {
+            localStorage.setItem('serverPanel_servers', JSON.stringify(servers));
+        }
+
         let currentLoggedInEmail = "";
         let currentServer = null;
 
@@ -502,12 +506,15 @@
                 id: srvName,
                 name: srvName,
                 running: false,
-                logHistory: "", // 서버별 콘솔 로그 저장용
+                logHistory: "",
+                version: "26.2",
+                javaVersion: "java 25",
                 users: [ADMIN_EMAIL],
                 fs: { "/": [] },
                 cache: {},
                 backups: []
             });
+            saveServersToStorage();
             renderServerCardGrid();
             alert(`서버 '${srvName}'이(가) 추가되었습니다.`);
         }
@@ -517,6 +524,7 @@
             if (!selectedServerId) return;
             if (confirm(`정말로 서버 '${selectedServerId}'을(를) 삭제하시겠습니까?`)) {
                 servers = servers.filter(s => s.id !== selectedServerId);
+                saveServersToStorage();
                 renderServerCardGrid();
             }
         }
@@ -530,8 +538,9 @@
 
             document.getElementById('serverTitle').value = currentServer.name;
             document.getElementById('settingServerName').value = currentServer.name;
+            document.getElementById('settingServerVersion').value = currentServer.version || "26.2";
+            document.getElementById('settingJavaVersion').value = currentServer.javaVersion || "java 25";
 
-            // 콘솔 화면에 해당 서버의 로그 기록 불러오기
             document.getElementById('console').textContent = currentServer.logHistory || "";
 
             initPanel();
@@ -540,7 +549,7 @@
         function initPanel() {
             ws = new WebSocket(WS_URL);
 
-            ws.onopen = () => { /* 초기 자동 출력 텍스트 제거 완료 */ };
+            ws.onopen = () => {};
             ws.onmessage = (event) => { 
                 const msg = event.data;
                 appendLog(msg);
@@ -548,9 +557,11 @@
                 if (msg.includes("Stopping the server") || msg.includes("Server stopped")) {
                     currentServer.running = false;
                     setServerState(false);
+                    saveServersToStorage();
                 } else if (msg.includes("Done") || msg.includes("Running")) {
                     currentServer.running = true;
                     setServerState(true);
+                    saveServersToStorage();
                 }
             };
 
@@ -568,14 +579,26 @@
             consoleElem.textContent += text;
             consoleElem.scrollTop = consoleElem.scrollHeight;
             if (currentServer) {
-                currentServer.logHistory = consoleElem.textContent; // 서버별 로그 저장
+                currentServer.logHistory = consoleElem.textContent;
+                saveServersToStorage();
             }
         }
 
         function syncServerTitle(val) {
             document.getElementById('serverTitle').value = val;
             document.getElementById('settingServerName').value = val;
-            if (currentServer) currentServer.name = val;
+            if (currentServer) {
+                currentServer.name = val;
+                saveServersToStorage();
+            }
+        }
+
+        function saveServerSettings() {
+            if (!currentServer) return;
+            currentServer.version = document.getElementById('settingServerVersion').value;
+            currentServer.javaVersion = document.getElementById('settingJavaVersion').value;
+            saveServersToStorage();
+            alert('설정이 저장되었습니다.');
         }
 
         function setServerState(isRunning) {
@@ -612,6 +635,7 @@
                 appendLog("[SYSTEM] 서버 시작 명령을 전송했습니다.\n");
                 currentServer.running = true;
                 setServerState(true);
+                saveServersToStorage();
             } else {
                 appendLog("[SYSTEM] 서버에 연결되어 있지 않습니다.\n");
             }
@@ -623,6 +647,7 @@
                 appendLog("[SYSTEM] 서버 정지 명령을 전송했습니다.\n");
                 currentServer.running = false;
                 setServerState(false);
+                saveServersToStorage();
             } else {
                 appendLog("[SYSTEM] 서버에 연결되어 있지 않아 정지 명령을 보낼 수 없습니다.\n");
             }
@@ -643,6 +668,7 @@
                 currentServer.fs = { "/": [] };
                 currentServer.cache = {};
                 currentPath = "/";
+                saveServersToStorage();
                 renderExplorer();
                 alert("서버가 성공적으로 재설치(초기화)되었습니다.");
             }
@@ -659,6 +685,7 @@
             }
 
             currentServer.users.push(email);
+            saveServersToStorage();
             renderServerUserList();
             emailInput.value = '';
             alert(`'${email}' 계정이 이 서버에 접근할 수 있도록 권한이 부여되었습니다.`);
@@ -668,6 +695,7 @@
             if (email === ADMIN_EMAIL) return alert("기본 관리자 권한은 제거할 수 없습니다.");
             if (confirm(`'${email}' 사용자의 서버 접근 권한을 제거하시겠습니까?`)) {
                 currentServer.users = currentServer.users.filter(e => e !== email);
+                saveServersToStorage();
                 renderServerUserList();
             }
         }
@@ -704,7 +732,6 @@
                 return alert("유효한 이메일과 비밀번호를 입력해주세요.");
             }
             
-            // 기존 계정 목록(userAccounts)에 이미 존재하는지 엄격하게 확인
             if (userAccounts.hasOwnProperty(email)) {
                 return alert("이미 존재하는 계정 이메일입니다.");
             }
@@ -728,15 +755,8 @@
                     <span>${email} ${email === ADMIN_EMAIL ? '(기본 관리자)' : ''}</span>
                     <span style="color: #888; font-size:12px;">우클릭하여 관리</span>
                 `;
-                row.oncontextmenu = (e) => {
-                    e.preventDefault();
-                    hideAllContextMenus();
-                    selectedAccountEmail = email;
-                    const menu = document.getElementById('accountContextMenu');
-                    menu.style.top = `${e.pageY}px`;
-                    menu.style.left = `${e.pageX}px`;
-                    menu.style.display = 'block';
-                };
+                // data 속성 부여하여 우클릭 타겟 식별 안정화
+                row.setAttribute('data-accountemail', email);
                 container.appendChild(row);
             });
         }
@@ -776,6 +796,7 @@
                 cache: JSON.parse(JSON.stringify(currentServer.cache))
             });
 
+            saveServersToStorage();
             renderBackups();
             alert(`서버 파일 백업 '${backupName}'이(가) 완료되었습니다.`);
         }
@@ -807,6 +828,7 @@
                 currentServer.fs = JSON.parse(JSON.stringify(targetBackup.fs));
                 currentServer.cache = JSON.parse(JSON.stringify(targetBackup.cache));
                 currentPath = "/";
+                saveServersToStorage();
                 renderExplorer();
                 alert("백업 파일이 성공적으로 불러와졌습니다.");
             }
@@ -828,6 +850,7 @@
             hideAllContextMenus();
             if (confirm(`정말로 백업 파일 '${selectedBackupName}'을(를) 삭제하시겠습니까?`)) {
                 currentServer.backups = currentServer.backups.filter(b => b.name !== selectedBackupName);
+                saveServersToStorage();
                 renderBackups();
             }
         }
@@ -933,6 +956,7 @@
             const fileName = document.getElementById('modalTitle').textContent;
             const content = document.getElementById('modalFileContent').value;
             currentServer.cache[fileName] = content;
+            saveServersToStorage();
             alert(`'${fileName}' 수정 사항이 저장되었습니다.`);
             closeModal();
         }
@@ -953,6 +977,7 @@
             const serverCard = e.target.closest('.server-item-card');
             const fileCard = e.target.closest('#page-files .file-card');
             const backupCard = e.target.closest('#backupGrid .file-card');
+            const accountRow = e.target.closest('#globalUserListContainer .user-row');
 
             if (serverCard) {
                 e.preventDefault();
@@ -961,6 +986,13 @@
                 serverContextMenu.style.top = `${e.pageY}px`;
                 serverContextMenu.style.left = `${e.pageX}px`;
                 serverContextMenu.style.display = 'block';
+            } else if (accountRow) {
+                e.preventDefault();
+                hideAllContextMenus();
+                selectedAccountEmail = accountRow.getAttribute('data-accountemail');
+                accountContextMenu.style.top = `${e.pageY}px`;
+                accountContextMenu.style.left = `${e.pageX}px`;
+                accountContextMenu.style.display = 'block';
             } else if (fileCard) {
                 e.preventDefault();
                 hideAllContextMenus();
@@ -995,6 +1027,7 @@
                     currentServer.cache[newName] = currentServer.cache[selectedFileName];
                     delete currentServer.cache[selectedFileName];
                 }
+                saveServersToStorage();
                 renderExplorer();
             }
         }
@@ -1004,6 +1037,7 @@
             if (!selectedFileName) return;
             const zipName = `${selectedFileName.split('.')[0]}.zip`;
             currentServer.fs[currentPath].push({ name: zipName, type: "file" });
+            saveServersToStorage();
             renderExplorer();
             alert(`'${selectedFileName}'이(가) '${zipName}'으로 압축되었습니다.`);
         }
@@ -1026,6 +1060,7 @@
             if (confirm(`정말로 '${selectedFileName}'을(를) 삭제하시겠습니까?`)) {
                 currentServer.fs[currentPath] = currentServer.fs[currentPath].filter(i => i.name !== selectedFileName);
                 delete currentServer.cache[selectedFileName];
+                saveServersToStorage();
                 renderExplorer();
             }
         }
@@ -1037,6 +1072,7 @@
 
             const file = fileInput.files[0];
             currentServer.fs[currentPath].push({ name: file.name, type: "file" });
+            saveServersToStorage();
             status.textContent = "업로드 완료!";
             renderExplorer();
         }
@@ -1056,6 +1092,7 @@
             }
 
             currentServer.fs[currentPath].push({ name: inputName, type: itemType });
+            saveServersToStorage();
             renderExplorer();
 
             status.textContent = `'${inputName}' ${isFolder ? '폴더' : '파일'}가 정상적으로 생성되었습니다!`;
