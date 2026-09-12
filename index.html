@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Server Panel - Login</title>
+    <title>Server Panel - Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
@@ -20,13 +20,30 @@
         .login-btn:hover { opacity: 0.9; }
         .login-error { color: #ff5252; font-size: 12px; text-align: center; min-height: 15px; }
 
+        /* Server List Dashboard View */
+        #serverListWrapper { display: none; width: 100%; height: 100%; display: flex; background-color: #1e1e1e; }
+        .dashboard-sidebar { width: 220px; background-color: #252526; border-right: 1px solid #333; display: flex; flex-direction: column; justify-content: space-between; padding: 15px 10px; }
+        .dashboard-main { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+        .dashboard-header-row { display: flex; justify-content: space-between; align-items: center; }
+        .dashboard-title { font-size: 22px; font-weight: bold; color: #fff; }
+        
+        .server-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-top: 10px; }
+        .server-item-card { background-color: #2b2b2b; border: 1px solid #3c3c3c; border-radius: 8px; padding: 15px; cursor: pointer; display: flex; flex-direction: column; gap: 10px; transition: 0.2s; position: relative; }
+        .server-item-card:hover { border-color: #ffff00; transform: translateY(-2px); }
+        .server-card-top { display: flex; justify-content: space-between; align-items: center; }
+        .server-card-name { font-size: 16px; font-weight: bold; color: #fff; }
+        .server-card-status { width: 10px; height: 10px; border-radius: 50%; background-color: #4caf50; }
+        .server-card-status.offline { background-color: #ff5252; }
+        .server-card-sub { font-size: 11px; color: #888; word-break: break-all; }
+
         /* Main Panel Wrapper */
         #mainPanelWrapper { display: none; width: 100%; height: 100%; }
 
         /* Left Sidebar */
         .sidebar { width: 220px; background-color: #252526; border-right: 1px solid #333; display: flex; flex-direction: column; justify-content: space-between; padding: 15px 10px; }
         .sidebar-top-group { display: flex; flex-direction: column; gap: 8px; }
-        .sidebar-top { display: flex; align-items: center; gap: 8px; font-weight: bold; color: #fff; padding: 8px; font-size: 14px; }
+        .sidebar-top { display: flex; align-items: center; gap: 8px; font-weight: bold; color: #fff; padding: 8px; font-size: 14px; cursor: pointer; }
+        .sidebar-top:hover { color: #ffff00; }
         .sidebar-menu-item { display: flex; align-items: center; gap: 8px; color: #aaa; padding: 8px; font-size: 13px; cursor: pointer; border-radius: 4px; }
         .sidebar-menu-item:hover { background-color: #2a2d2e; color: #fff; }
         
@@ -125,7 +142,7 @@
         <div class="login-card">
             <div class="login-title"><i class="fa-solid fa-server"></i> Server Panel 로그인</div>
             <div>
-                <label class="login-label">관리자 이메일</label>
+                <label class="login-label">이메일</label>
                 <input type="email" id="loginEmail" class="login-input" placeholder="이메일을 입력하세요">
             </div>
             <div>
@@ -137,15 +154,31 @@
         </div>
     </div>
 
+    <div id="serverListWrapper" style="display: none;">
+        <div class="dashboard-sidebar">
+            <div class="sidebar-top-group">
+                <div class="sidebar-top" onclick="goToServerList()"><i class="fa-solid fa-server"></i> 서버</div>
+                <div id="globalUserManageMenu" class="sidebar-menu-item" onclick="openGlobalUserModal()" style="display: none;">
+                    <i class="fa-solid fa-user-gear"></i> 계정 관리
+                </div>
+            </div>
+            <div class="sidebar-bottom">
+                <div class="sidebar-item" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> 로그아웃</div>
+            </div>
+        </div>
+        <div class="dashboard-main">
+            <div class="dashboard-header-row">
+                <div class="dashboard-title">서버 목록</div>
+                <button id="createServerBtn" class="btn-custom btn-success" style="margin-top:0; display: none;" onclick="createNewServerPrompt()">+ 서버 추가</button>
+            </div>
+            <div id="serverCardGrid" class="server-card-grid"></div>
+        </div>
+    </div>
+
     <div id="mainPanelWrapper" style="display: none; width: 100%; height: 100%;">
         <div class="sidebar">
             <div class="sidebar-top-group">
-                <div class="sidebar-top">
-                    <i class="fa-solid fa-server"></i> 서버
-                </div>
-                <div id="sidebarUserMenu" class="sidebar-menu-item" onclick="showTab('users', document.querySelector('.nav-tabs .tab-item:nth-child(5)'))" style="display: none;">
-                    <i class="fa-solid fa-users"></i> 사용자 관리
-                </div>
+                <div class="sidebar-top" onclick="goToServerList()"><i class="fa-solid fa-arrow-left"></i> 서버 목록으로</div>
             </div>
             <div class="sidebar-bottom">
                 <div class="sidebar-item" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> 로그아웃</div>
@@ -173,7 +206,7 @@
                     <div class="tab-item" onclick="showTab('stats', this)"><i class="fa-solid fa-chart-line"></i>통계</div>
                     <div class="tab-item" onclick="showTab('files', this)"><i class="fa-solid fa-file"></i>파일</div>
                     <div class="tab-item" onclick="showTab('settings', this)"><i class="fa-solid fa-gear"></i>설정</div>
-                    <div class="tab-item" id="tabUsers" onclick="showTab('users', this)" style="display: none;"><i class="fa-solid fa-users"></i>사용자</div>
+                    <div class="tab-item" onclick="showTab('users', this)"><i class="fa-solid fa-users"></i>사용자</div>
                     <div class="tab-item" onclick="showTab('sftp', this)"><i class="fa-solid fa-network-wired"></i>SFTP 정보</div>
                     <div class="tab-item" onclick="showTab('backup', this)"><i class="fa-solid fa-rotate-left"></i>Backup</div>
                 </div>
@@ -269,23 +302,18 @@
                     <div id="page-users" class="tab-page">
                         <div class="tab-padded">
                             <div class="section-box">
-                                <h3>👥 콘솔(서버 파일) 접근 권한 관리</h3>
-                                <p style="font-size: 12px; color: #aaa; margin-top: 5px;">이메일 주소를 입력하여 콘솔 및 파일을 조작할 수 있는 사용자를 추가하거나 제거할 수 있습니다.</p>
+                                <h3>👥 현재 서버 접근 권한 관리</h3>
+                                <p style="font-size: 12px; color: #aaa; margin-top: 5px;">이 이메일을 가진 계정만 이 서버에 접근할 수 있습니다.</p>
                                 
                                 <div style="display: flex; gap: 10px; margin-top: 15px;">
-                                    <input type="email" id="userEmailInput" class="input-text" placeholder="추가할 사용자의 이메일 입력 (예: user@example.com)" style="margin-top: 0;">
-                                    <button class="btn-custom btn-success" style="margin-top: 0; white-space: nowrap;" onclick="addUser()">사용자 추가</button>
+                                    <input type="email" id="serverUserEmailInput" class="input-text" placeholder="추가할 사용자의 이메일 입력 (예: user@example.com)" style="margin-top: 0;">
+                                    <button class="btn-custom btn-success" style="margin-top: 0; white-space: nowrap;" onclick="addServerUser()">권한 추가</button>
                                 </div>
                             </div>
 
                             <div class="section-box" style="border-bottom: none;">
-                                <h3>📋 권한이 있는 사용자 목록</h3>
-                                <div id="userListContainer" style="margin-top: 10px;">
-                                    <div class="user-row">
-                                        <span>syhblack1@gmail.com (관리자)</span>
-                                        <span style="color: #888; font-size:12px;">기본 관리자</span>
-                                    </div>
-                                </div>
+                                <h3>📋 이 서버에 접근 가능한 사용자 목록</h3>
+                                <div id="serverUserListContainer" style="margin-top: 10px;"></div>
                             </div>
                         </div>
                     </div>
@@ -310,6 +338,27 @@
 
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="modal" id="globalUserModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>사용자 계정 생성 및 관리</span>
+                <span class="close-btn" onclick="closeGlobalUserModal()">&times;</span>
+            </div>
+            <div>
+                <label style="font-size:12px; color:#aaa;">이메일 주소</label>
+                <input type="email" id="newAccEmail" class="input-text" placeholder="user@example.com">
+            </div>
+            <div style="margin-top: 10px;">
+                <label style="font-size:12px; color:#aaa;">비밀번호</label>
+                <input type="password" id="newAccPassword" class="input-text" placeholder="비밀번호 입력">
+            </div>
+            <button class="btn-custom btn-success" style="margin-top: 15px;" onclick="registerNewAccount()">계정 저장 및 추가</button>
+            
+            <h3 style="margin-top: 20px; font-size:14px;">등록된 사용자 계정 목록</h3>
+            <div id="globalUserListContainer" style="margin-top: 10px; max-height: 150px; overflow-y: auto;"></div>
         </div>
     </div>
 
@@ -338,16 +387,24 @@
     </div>
 
     <script>
-        const BACKEND_URL = "https://mc-hosting-6fri.onrender.com";
         const WS_URL = "wss://mc-hosting-6fri.onrender.com";
 
         const ADMIN_EMAIL = "syhblack1@gmail.com";
-        const ADMIN_PASSWORD = "admin1234"; // 비밀번호 내부 변수 유지
+        
+        // 전체 시스템에 등록된 계정 목록 (이메일: 비밀번호)
+        let userAccounts = {
+            "syhblack1@gmail.com": "admin1234"
+        };
 
-        let virtualFileSystem = { "/": [] };
-        let localFileCache = {};
-        let backupList = [];
-        let authorizedUsers = [];
+        // 서버 목록 데이터 (서버별로 접근 권한 users 배열 보유)
+        let servers = [
+            { id: "kimglin", name: "kimglin", running: false, users: ["syhblack1@gmail.com"], fs: { "/": [] }, cache: {}, backups: [] },
+            { id: "noobis", name: "noobis", running: true, users: ["syhblack1@gmail.com"], fs: { "/": [] }, cache: {}, backups: [] },
+            { id: "noobis_dead", name: "noobis_dead", running: false, users: ["syhblack1@gmail.com"], fs: { "/": [] }, cache: {}, backups: [] }
+        ];
+
+        let currentLoggedInEmail = "";
+        let currentServer = null;
 
         let currentPath = "/";
         let selectedTargetElement = null;
@@ -364,40 +421,104 @@
             const password = document.getElementById('loginPassword').value.trim();
             const errorMsg = document.getElementById('loginErrorMsg');
 
-            if (email !== ADMIN_EMAIL) {
-                errorMsg.textContent = "등록된 관리자 이메일이 아닙니다.";
-                return;
-            }
-            if (password !== ADMIN_PASSWORD) {
-                errorMsg.textContent = "비밀번호가 일치하지 않습니다.";
+            if (!userAccounts[email] || userAccounts[email] !== password) {
+                errorMsg.textContent = "이메일 또는 비밀번호가 일치하지 않습니다.";
                 return;
             }
 
+            currentLoggedInEmail = email;
             document.getElementById('loginWrapper').style.display = 'none';
-            document.getElementById('mainPanelWrapper').style.display = 'flex';
-
-            // syhblack1 계정 로그인 시에만 사이드바 및 상단 탭에 사용자 관리 메뉴 노출
+            
+            // syhblack1 계정일 경우 대시보드 내 계정관리 메뉴 및 서버 추가 버튼 표시
             if (email === ADMIN_EMAIL) {
-                document.getElementById('sidebarUserMenu').style.display = 'flex';
-                document.getElementById('tabUsers').style.display = 'flex';
+                document.getElementById('globalUserManageMenu').style.display = 'flex';
+                document.getElementById('createServerBtn').style.display = 'block';
+            } else {
+                document.getElementById('globalUserManageMenu').style.display = 'none';
+                document.getElementById('createServerBtn').style.display = 'none';
             }
 
-            initPanel();
+            goToServerList();
         }
 
         function logout() {
             if (confirm("로그아웃 하시겠습니까?")) {
                 if (ws) ws.close();
+                currentServer = null;
                 document.getElementById('mainPanelWrapper').style.display = 'none';
+                document.getElementById('serverListWrapper').style.display = 'none';
                 document.getElementById('loginWrapper').style.display = 'flex';
                 document.getElementById('loginEmail').value = '';
                 document.getElementById('loginPassword').value = '';
                 document.getElementById('loginErrorMsg').textContent = '';
-                
-                // 로그아웃 시 사용자 메뉴 다시 숨김
-                document.getElementById('sidebarUserMenu').style.display = 'none';
-                document.getElementById('tabUsers').style.display = 'none';
             }
+        }
+
+        function goToServerList() {
+            if (ws) ws.close();
+            document.getElementById('mainPanelWrapper').style.display = 'none';
+            document.getElementById('serverListWrapper').style.display = 'flex';
+            renderServerCardGrid();
+        }
+
+        function renderServerCardGrid() {
+            const grid = document.getElementById('serverCardGrid');
+            grid.innerHTML = "";
+
+            // 현재 로그인한 계정이 접근 권한이 있는 서버만 필터링 (단, syhblack1은 모두 보기 가능)
+            const availableServers = servers.filter(s => currentLoggedInEmail === ADMIN_EMAIL || s.users.includes(currentLoggedInEmail));
+
+            if (availableServers.length === 0) {
+                grid.innerHTML = "<span style='color:#777; font-size:13px;'>접근 가능한 서버가 없습니다.</span>";
+                return;
+            }
+
+            availableServers.forEach(srv => {
+                const card = document.createElement('div');
+                card.className = 'server-item-card';
+                card.onclick = () => openServerPanel(srv.id);
+                card.innerHTML = `
+                    <div class="server-card-top">
+                        <span class="server-card-name">${srv.name}</span>
+                        <div class="server-card-status ${srv.running ? '' : 'offline'}"></div>
+                    </div>
+                    <span class="server-card-sub">puffer.madscientist.n-e.kr:${Math.floor(Math.random()*10000)+20000} @ LocalNode</span>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function createNewServerPrompt() {
+            const srvName = prompt("생성할 새 서버 이름을 입력하세요:");
+            if (!srvName) return;
+            if (servers.some(s => s.id === srvName)) {
+                return alert("이미 존재하는 서버 이름입니다.");
+            }
+
+            servers.push({
+                id: srvName,
+                name: srvName,
+                running: false,
+                users: [ADMIN_EMAIL],
+                fs: { "/": [] },
+                cache: {},
+                backups: []
+            });
+            renderServerCardGrid();
+            alert(`서버 '${srvName}'이(가) 추가되었습니다.`);
+        }
+
+        function openServerPanel(serverId) {
+            currentServer = servers.find(s => s.id === serverId);
+            if (!currentServer) return;
+
+            document.getElementById('serverListWrapper').style.display = 'none';
+            document.getElementById('mainPanelWrapper').style.display = 'flex';
+
+            document.getElementById('serverTitle').value = currentServer.name;
+            document.getElementById('settingServerName').value = currentServer.name;
+
+            initPanel();
         }
 
         function initPanel() {
@@ -409,17 +530,19 @@
                 appendLog(msg);
                 
                 if (msg.includes("Stopping the server") || msg.includes("Server stopped")) {
+                    currentServer.running = false;
                     setServerState(false);
                 } else if (msg.includes("Done") || msg.includes("Running")) {
+                    currentServer.running = true;
                     setServerState(true);
                 }
             };
 
             renderExplorer();
             renderBackups();
-            renderUserList();
+            renderServerUserList();
             updateStats();
-            setServerState(true);
+            setServerState(currentServer.running);
         }
 
         const consoleElem = document.getElementById('console');
@@ -433,6 +556,7 @@
         function syncServerTitle(val) {
             document.getElementById('serverTitle').value = val;
             document.getElementById('settingServerName').value = val;
+            if (currentServer) currentServer.name = val;
         }
 
         function setServerState(isRunning) {
@@ -467,6 +591,7 @@
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send("start");
                 appendLog("[SYSTEM] 서버 시작 명령을 전송했습니다.\n");
+                currentServer.running = true;
                 setServerState(true);
             } else {
                 appendLog("[SYSTEM] 서버에 연결되어 있지 않습니다.\n");
@@ -477,6 +602,7 @@
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send("stop");
                 appendLog("[SYSTEM] 서버 정지 명령을 전송했습니다.\n");
+                currentServer.running = false;
                 setServerState(false);
             } else {
                 appendLog("[SYSTEM] 서버에 연결되어 있지 않아 정지 명령을 보낼 수 없습니다.\n");
@@ -495,55 +621,92 @@
         function reinstallServer() {
             const confirm1 = confirm("정말로 서버를 재설치하시겠습니까? 모든 파일이 초기화됩니다.");
             if (confirm1) {
-                const confirm2 = confirm("정말 모든 데이터를 지우고 초기화하겠습니다?");
-                if (confirm2) {
-                    virtualFileSystem = { "/": [] };
-                    localFileCache = {};
-                    currentPath = "/";
-                    renderExplorer();
-                    alert("서버가 성공적으로 재설치(초기화)되었습니다.");
-                }
+                currentServer.fs = { "/": [] };
+                currentServer.cache = {};
+                currentPath = "/";
+                renderExplorer();
+                alert("서버가 성공적으로 재설치(초기화)되었습니다.");
             }
         }
 
-        function addUser() {
-            const emailInput = document.getElementById('userEmailInput');
+        // 개별 서버 사용자 권한 관리
+        function addServerUser() {
+            const emailInput = document.getElementById('serverUserEmailInput');
             const email = emailInput.value.trim();
             if (!email || !email.includes('@')) {
                 return alert("올바른 이메일 주소를 입력해주세요.");
             }
-            if (authorizedUsers.includes(email) || email === ADMIN_EMAIL) {
-                return alert("이미 등록되었거나 관리자 계정입니다.");
+            if (currentServer.users.includes(email)) {
+                return alert("이미 이 서버에 추가된 사용자입니다.");
             }
 
-            authorizedUsers.push(email);
-            renderUserList();
+            currentServer.users.push(email);
+            renderServerUserList();
             emailInput.value = '';
-            alert(`'${email}' 사용자가 콘솔 접근 권한에 추가되었습니다.`);
+            alert(`'${email}' 계정이 이 서버에 접근할 수 있도록 권한이 부여되었습니다.`);
         }
 
-        function removeUser(email) {
-            if (confirm(`'${email}' 사용자의 콘솔 접근 권한을 제거하시겠습니까?`)) {
-                authorizedUsers = authorizedUsers.filter(e => e !== email);
-                renderUserList();
+        function removeServerUser(email) {
+            if (email === ADMIN_EMAIL) return alert("기본 관리자 권한은 제거할 수 없습니다.");
+            if (confirm(`'${email}' 사용자의 서버 접근 권한을 제거하시겠습니까?`)) {
+                currentServer.users = currentServer.users.filter(e => e !== email);
+                renderServerUserList();
             }
         }
 
-        function renderUserList() {
-            const container = document.getElementById('userListContainer');
+        function renderServerUserList() {
+            const container = document.getElementById('serverUserListContainer');
             if (!container) return;
-            container.innerHTML = `
-                <div class="user-row">
-                    <span>syhblack1@gmail.com (관리자)</span>
-                    <span style="color: #888; font-size:12px;">기본 관리자</span>
-                </div>
-            `;
-            authorizedUsers.forEach(email => {
+            container.innerHTML = "";
+            currentServer.users.forEach(email => {
+                const row = document.createElement('div');
+                row.className = 'user-row';
+                row.innerHTML = `
+                    <span>${email} ${email === ADMIN_EMAIL ? '(관리자)' : ''}</span>
+                    ${email !== ADMIN_EMAIL ? `<button class="btn-custom btn-danger" style="margin-top:0; padding:4px 8px; font-size:11px;" onclick="removeServerUser('${email}')">제거</button>` : '<span style="color:#888; font-size:12px;">기본 관리자</span>'}
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        // 글로벌 계정 관리 모달 관련 기능
+        function openGlobalUserModal() {
+            document.getElementById('globalUserModal').style.display = 'flex';
+            renderGlobalUserList();
+        }
+
+        function closeGlobalUserModal() {
+            document.getElementById('globalUserModal').style.display = 'none';
+        }
+
+        function registerNewAccount() {
+            const email = document.getElementById('newAccEmail').value.trim();
+            const password = document.getElementById('newAccPassword').value.trim();
+
+            if (!email || !email.includes('@') || !password) {
+                return alert("유효한 이메일과 비밀번호를 입력해주세요.");
+            }
+            if (userAccounts[email]) {
+                return alert("이미 존재하는 계정 이메일입니다.");
+            }
+
+            userAccounts[email] = password;
+            renderGlobalUserList();
+            document.getElementById('newAccEmail').value = '';
+            document.getElementById('newAccPassword').value = '';
+            alert(`새로운 계정 '${email}'이(가) 정상적으로 생성되었습니다. 이제 이 정보로 로그인이 가능합니다.`);
+        }
+
+        function renderGlobalUserList() {
+            const container = document.getElementById('globalUserListContainer');
+            if (!container) return;
+            container.innerHTML = "";
+            Object.keys(userAccounts).forEach(email => {
                 const row = document.createElement('div');
                 row.className = 'user-row';
                 row.innerHTML = `
                     <span>${email}</span>
-                    <button class="btn-custom btn-danger" style="margin-top:0; padding:4px 8px; font-size:11px;" onclick="removeUser('${email}')">제거</button>
+                    <span style="color: #888; font-size:12px;">비밀번호 등록됨</span>
                 `;
                 container.appendChild(row);
             });
@@ -553,11 +716,11 @@
             const dateStr = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
             const backupName = `backup_${dateStr}.zip`;
             
-            backupList.push({ 
+            currentServer.backups.push({ 
                 name: backupName, 
                 date: new Date().toLocaleString(),
-                fs: JSON.parse(JSON.stringify(virtualFileSystem)),
-                cache: JSON.parse(JSON.stringify(localFileCache))
+                fs: JSON.parse(JSON.stringify(currentServer.fs)),
+                cache: JSON.parse(JSON.stringify(currentServer.cache))
             });
 
             renderBackups();
@@ -568,12 +731,12 @@
             const grid = document.getElementById('backupGrid');
             if (!grid) return;
             grid.innerHTML = "";
-            if (backupList.length === 0) {
+            if (currentServer.backups.length === 0) {
                 grid.innerHTML = "<span style='font-size:12px; color:#777;'>저장된 백업 파일이 없습니다.</span>";
                 return;
             }
 
-            backupList.forEach(item => {
+            currentServer.backups.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'file-card';
                 card.setAttribute('data-backupname', item.name);
@@ -585,12 +748,12 @@
 
         function restoreBackup() {
             hideAllContextMenus();
-            const targetBackup = backupList.find(b => b.name === selectedBackupName);
+            const targetBackup = currentServer.backups.find(b => b.name === selectedBackupName);
             if (!targetBackup) return alert("백업 파일을 찾을 수 없습니다.");
 
             if (confirm(`'${selectedBackupName}' 백업본으로 서버 파일을 복구(불러오기)하시겠습니까?`)) {
-                virtualFileSystem = JSON.parse(JSON.stringify(targetBackup.fs));
-                localFileCache = JSON.parse(JSON.stringify(targetBackup.cache));
+                currentServer.fs = JSON.parse(JSON.stringify(targetBackup.fs));
+                currentServer.cache = JSON.parse(JSON.stringify(targetBackup.cache));
                 currentPath = "/";
                 renderExplorer();
                 alert("백업 파일이 성공적으로 불러와졌습니다.");
@@ -599,7 +762,7 @@
 
         function downloadBackup() {
             hideAllContextMenus();
-            const targetBackup = backupList.find(b => b.name === selectedBackupName);
+            const targetBackup = currentServer.backups.find(b => b.name === selectedBackupName);
             const content = targetBackup ? JSON.stringify(targetBackup.fs, null, 2) : "Backup Archive Content";
             const blob = new Blob([content], { type: 'application/zip' });
             const link = document.createElement('a');
@@ -612,7 +775,7 @@
         function deleteBackup() {
             hideAllContextMenus();
             if (confirm(`정말로 백업 파일 '${selectedBackupName}'을(를) 삭제하시겠습니까?`)) {
-                backupList = backupList.filter(b => b.name !== selectedBackupName);
+                currentServer.backups = currentServer.backups.filter(b => b.name !== selectedBackupName);
                 renderBackups();
             }
         }
@@ -638,11 +801,11 @@
             pathDisplay.textContent = `📂 ${currentPath}`;
             backBtn.style.display = currentPath === "/" ? "none" : "block";
 
-            if (!virtualFileSystem[currentPath]) {
-                virtualFileSystem[currentPath] = [];
+            if (!currentServer.fs[currentPath]) {
+                currentServer.fs[currentPath] = [];
             }
 
-            const items = virtualFileSystem[currentPath];
+            const items = currentServer.fs[currentPath];
 
             items.forEach(item => {
                 const card = document.createElement('div');
@@ -706,7 +869,7 @@
             if (filename.endsWith('.jar')) return alert(`'${filename}' 실행 가능한 바이너리 파일입니다.`);
 
             document.getElementById('modalTitle').textContent = filename;
-            document.getElementById('modalFileContent').value = localFileCache[filename] || `# ${filename} 내용이 비어있습니다.`;
+            document.getElementById('modalFileContent').value = currentServer.cache[filename] || `# ${filename} 내용이 비어있습니다.`;
             document.getElementById('fileModal').style.display = 'flex';
         }
 
@@ -717,7 +880,7 @@
         async function saveOpenedFile() {
             const fileName = document.getElementById('modalTitle').textContent;
             const content = document.getElementById('modalFileContent').value;
-            localFileCache[fileName] = content;
+            currentServer.cache[fileName] = content;
             alert(`'${fileName}' 수정 사항이 저장되었습니다.`);
             closeModal();
         }
@@ -760,13 +923,13 @@
             if (!selectedFileName) return;
             const newName = prompt("변경할 이름을 입력하세요:", selectedFileName);
             if (newName && newName !== selectedFileName) {
-                const list = virtualFileSystem[currentPath];
+                const list = currentServer.fs[currentPath];
                 const item = list.find(i => i.name === selectedFileName);
                 if (item) item.name = newName;
 
-                if (localFileCache[selectedFileName]) {
-                    localFileCache[newName] = localFileCache[selectedFileName];
-                    delete localFileCache[selectedFileName];
+                if (currentServer.cache[selectedFileName]) {
+                    currentServer.cache[newName] = currentServer.cache[selectedFileName];
+                    delete currentServer.cache[selectedFileName];
                 }
                 renderExplorer();
             }
@@ -776,7 +939,7 @@
             hideAllContextMenus();
             if (!selectedFileName) return;
             const zipName = `${selectedFileName.split('.')[0]}.zip`;
-            virtualFileSystem[currentPath].push({ name: zipName, type: "file" });
+            currentServer.fs[currentPath].push({ name: zipName, type: "file" });
             renderExplorer();
             alert(`'${selectedFileName}'이(가) '${zipName}'으로 압축되었습니다.`);
         }
@@ -784,7 +947,7 @@
         function downloadFile() {
             hideAllContextMenus();
             if (!selectedFileName) return;
-            const content = localFileCache[selectedFileName] || "";
+            const content = currentServer.cache[selectedFileName] || "";
             const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
@@ -797,8 +960,8 @@
             hideAllContextMenus();
             if (!selectedFileName) return;
             if (confirm(`정말로 '${selectedFileName}'을(를) 삭제하시겠습니까?`)) {
-                virtualFileSystem[currentPath] = virtualFileSystem[currentPath].filter(i => i.name !== selectedFileName);
-                delete localFileCache[selectedFileName];
+                currentServer.fs[currentPath] = currentServer.fs[currentPath].filter(i => i.name !== selectedFileName);
+                delete currentServer.cache[selectedFileName];
                 renderExplorer();
             }
         }
@@ -809,7 +972,7 @@
             if (fileInput.files.length === 0) return alert("파일을 선택하세요.");
 
             const file = fileInput.files[0];
-            virtualFileSystem[currentPath].push({ name: file.name, type: "file" });
+            currentServer.fs[currentPath].push({ name: file.name, type: "file" });
             status.textContent = "업로드 완료!";
             renderExplorer();
         }
@@ -825,10 +988,10 @@
             const itemType = isFolder ? "folder" : "file";
 
             if (!isFolder) {
-                localFileCache[inputName] = content;
+                currentServer.cache[inputName] = content;
             }
 
-            virtualFileSystem[currentPath].push({ name: inputName, type: itemType });
+            currentServer.fs[currentPath].push({ name: inputName, type: itemType });
             renderExplorer();
 
             status.textContent = `'${inputName}' ${isFolder ? '폴더' : '파일'}가 정상적으로 생성되었습니다!`;
