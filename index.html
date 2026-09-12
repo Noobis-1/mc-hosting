@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Server Panel - Login</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- JSZip 라이브러리 (zip 압축용) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -21,12 +20,16 @@
         .login-btn:hover { opacity: 0.9; }
         .login-error { color: #ff5252; font-size: 12px; text-align: center; min-height: 15px; }
 
-        /* Main Panel Wrapper (Hidden by default until login) */
-        #mainPanelWrapper { display: none; width: 100%; height: 100%; display: none; }
+        /* Main Panel Wrapper */
+        #mainPanelWrapper { display: none; width: 100%; height: 100%; }
 
         /* Left Sidebar */
         .sidebar { width: 220px; background-color: #252526; border-right: 1px solid #333; display: flex; flex-direction: column; justify-content: space-between; padding: 15px 10px; }
+        .sidebar-top-group { display: flex; flex-direction: column; gap: 8px; }
         .sidebar-top { display: flex; align-items: center; gap: 8px; font-weight: bold; color: #fff; padding: 8px; font-size: 14px; }
+        .sidebar-menu-item { display: flex; align-items: center; gap: 8px; color: #aaa; padding: 8px; font-size: 13px; cursor: pointer; border-radius: 4px; }
+        .sidebar-menu-item:hover { background-color: #2a2d2e; color: #fff; }
+        
         .sidebar-bottom { display: flex; flex-direction: column; gap: 15px; font-size: 13px; color: #aaa; padding-left: 8px; }
         .sidebar-item { display: flex; align-items: center; gap: 10px; cursor: pointer; }
         .sidebar-item:hover { color: #fff; }
@@ -118,40 +121,40 @@
 </head>
 <body>
 
-    <!-- 로그인 화면 -->
     <div id="loginWrapper">
         <div class="login-card">
             <div class="login-title"><i class="fa-solid fa-server"></i> Server Panel 로그인</div>
             <div>
                 <label class="login-label">관리자 이메일</label>
-                <input type="email" id="loginEmail" class="login-input" placeholder="syhblack1@gmail.com">
+                <input type="email" id="loginEmail" class="login-input" placeholder="이메일을 입력하세요">
             </div>
             <div>
                 <label class="login-label">비밀번호</label>
-                <input type="password" id="loginPassword" class="login-input" placeholder="비밀번호 입력" onkeypress="handleLoginKeyPress(event)">
+                <input type="password" id="loginPassword" class="login-input" placeholder="비밀번호를 입력하세요" onkeypress="handleLoginKeyPress(event)">
             </div>
             <div class="login-error" id="loginErrorMsg"></div>
             <button class="login-btn" onclick="handleLogin()">로그인</button>
         </div>
     </div>
 
-    <!-- 메인 패널 화면 (로그인 후 표시) -->
     <div id="mainPanelWrapper" style="display: none; width: 100%; height: 100%;">
-        <!-- Left Sidebar -->
         <div class="sidebar">
-            <div class="sidebar-top">
-                <i class="fa-solid fa-server"></i> 서버
+            <div class="sidebar-top-group">
+                <div class="sidebar-top">
+                    <i class="fa-solid fa-server"></i> 서버
+                </div>
+                <div id="sidebarUserMenu" class="sidebar-menu-item" onclick="showTab('users', document.querySelector('.nav-tabs .tab-item:nth-child(5)'))" style="display: none;">
+                    <i class="fa-solid fa-users"></i> 사용자 관리
+                </div>
             </div>
             <div class="sidebar-bottom">
                 <div class="sidebar-item" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> 로그아웃</div>
             </div>
         </div>
 
-        <!-- Main Container -->
         <div class="main-wrapper">
             <div class="panel-card">
                 
-                <!-- Header -->
                 <div class="card-header">
                     <div class="server-name-box">
                         <div class="status-dot" id="statusDot"><i class="fa-solid fa-play" id="statusDotIcon"></i></div>
@@ -165,21 +168,18 @@
                     </div>
                 </div>
 
-                <!-- Navigation Tabs -->
                 <div class="nav-tabs">
                     <div class="tab-item active" onclick="showTab('console', this)"><i class="fa-solid fa-terminal"></i>콘솔</div>
                     <div class="tab-item" onclick="showTab('stats', this)"><i class="fa-solid fa-chart-line"></i>통계</div>
                     <div class="tab-item" onclick="showTab('files', this)"><i class="fa-solid fa-file"></i>파일</div>
                     <div class="tab-item" onclick="showTab('settings', this)"><i class="fa-solid fa-gear"></i>설정</div>
-                    <div class="tab-item" onclick="showTab('users', this)"><i class="fa-solid fa-users"></i>사용자</div>
+                    <div class="tab-item" id="tabUsers" onclick="showTab('users', this)" style="display: none;"><i class="fa-solid fa-users"></i>사용자</div>
                     <div class="tab-item" onclick="showTab('sftp', this)"><i class="fa-solid fa-network-wired"></i>SFTP 정보</div>
                     <div class="tab-item" onclick="showTab('backup', this)"><i class="fa-solid fa-rotate-left"></i>Backup</div>
                 </div>
 
-                <!-- Main Content Area -->
                 <div class="content-body">
                     
-                    <!-- 1. 콘솔 탭 -->
                     <div id="page-console" class="tab-page active">
                         <div id="console"></div>
                         <div class="command-bar">
@@ -190,7 +190,6 @@
                         </div>
                     </div>
 
-                    <!-- 2. 통계 탭 -->
                     <div id="page-stats" class="tab-page">
                         <div class="tab-padded">
                             <h3>📊 실시간 서버 성능 통계</h3>
@@ -215,7 +214,6 @@
                         </div>
                     </div>
 
-                    <!-- 3. 파일 탭 -->
                     <div id="page-files" class="tab-page">
                         <div class="tab-padded">
                             <div class="section-box">
@@ -244,7 +242,6 @@
                         </div>
                     </div>
 
-                    <!-- 4. 설정 탭 -->
                     <div id="page-settings" class="tab-page">
                         <div class="tab-padded">
                             <div class="section-box">
@@ -269,7 +266,6 @@
                         </div>
                     </div>
 
-                    <!-- 5. 사용자 탭 -->
                     <div id="page-users" class="tab-page">
                         <div class="tab-padded">
                             <div class="section-box">
@@ -294,10 +290,8 @@
                         </div>
                     </div>
 
-                    <!-- 6. SFTP 탭 -->
                     <div id="page-sftp" class="tab-page"><div class="tab-padded"><h3>🔌 SFTP 접속 정보</h3></div></div>
 
-                    <!-- 7. Backup 탭 -->
                     <div id="page-backup" class="tab-page">
                         <div class="tab-padded">
                             <div class="section-box">
@@ -319,7 +313,6 @@
         </div>
     </div>
 
-    <!-- 일반 파일 우클릭 메뉴 -->
     <div class="context-menu" id="contextMenu">
         <div class="context-menu-item" onclick="renameFile()"><i class="fa-solid fa-pen"></i> 이름 수정</div>
         <div class="context-menu-item" onclick="compressFile()"><i class="fa-solid fa-file-zipper"></i> 압축 (.zip)</div>
@@ -327,14 +320,12 @@
         <div class="context-menu-item danger" onclick="deleteFile()"><i class="fa-solid fa-trash"></i> 삭제</div>
     </div>
 
-    <!-- 백업 전용 우클릭 컨텍스트 메뉴 -->
     <div class="context-menu" id="backupContextMenu">
         <div class="context-menu-item" onclick="restoreBackup()"><i class="fa-solid fa-rotate-left"></i> 불러오기</div>
         <div class="context-menu-item" onclick="downloadBackup()"><i class="fa-solid fa-download"></i> 다운로드</div>
         <div class="context-menu-item danger" onclick="deleteBackup()"><i class="fa-solid fa-trash"></i> 삭제</div>
     </div>
 
-    <!-- 파일 열기 모달 팝업창 -->
     <div class="modal" id="fileModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -350,9 +341,8 @@
         const BACKEND_URL = "https://mc-hosting-6fri.onrender.com";
         const WS_URL = "wss://mc-hosting-6fri.onrender.com";
 
-        // 기본 관리자 계정 정보 (요청하신 이메일과 임시 비밀번호)
         const ADMIN_EMAIL = "syhblack1@gmail.com";
-        const ADMIN_PASSWORD = "admin1234"; // 필요시 변경 가능
+        const ADMIN_PASSWORD = "admin1234"; // 비밀번호 내부 변수 유지
 
         let virtualFileSystem = { "/": [] };
         let localFileCache = {};
@@ -375,19 +365,23 @@
             const errorMsg = document.getElementById('loginErrorMsg');
 
             if (email !== ADMIN_EMAIL) {
-                errorMsg.textContent = "등록되지 않은 관리자 이메일입니다. (syhblack1@gmail.com만 가능)";
+                errorMsg.textContent = "등록된 관리자 이메일이 아닙니다.";
                 return;
             }
             if (password !== ADMIN_PASSWORD) {
-                errorMsg.textContent = "비밀번호가 일치하지 않습니다. (초기 비밀번호: admin1234)";
+                errorMsg.textContent = "비밀번호가 일치하지 않습니다.";
                 return;
             }
 
-            // 로그인 성공 시 로그인 화면 숨기고 메인 패널 표시
             document.getElementById('loginWrapper').style.display = 'none';
             document.getElementById('mainPanelWrapper').style.display = 'flex';
 
-            // 웹소켓 연결 및 초기화 실행
+            // syhblack1 계정 로그인 시에만 사이드바 및 상단 탭에 사용자 관리 메뉴 노출
+            if (email === ADMIN_EMAIL) {
+                document.getElementById('sidebarUserMenu').style.display = 'flex';
+                document.getElementById('tabUsers').style.display = 'flex';
+            }
+
             initPanel();
         }
 
@@ -396,8 +390,13 @@
                 if (ws) ws.close();
                 document.getElementById('mainPanelWrapper').style.display = 'none';
                 document.getElementById('loginWrapper').style.display = 'flex';
+                document.getElementById('loginEmail').value = '';
                 document.getElementById('loginPassword').value = '';
                 document.getElementById('loginErrorMsg').textContent = '';
+                
+                // 로그아웃 시 사용자 메뉴 다시 숨김
+                document.getElementById('sidebarUserMenu').style.display = 'none';
+                document.getElementById('tabUsers').style.display = 'none';
             }
         }
 
