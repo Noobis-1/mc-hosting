@@ -30,10 +30,11 @@
         .status-dot i { font-size: 8px; color: #000; margin-left: 1px; }
         .server-title { font-size: 24px; font-weight: 800; color: #ffffff; cursor: pointer; border: none; background: transparent; outline: none; }
         
-        .header-actions { display: flex; align-items: center; gap: 15px; color: #ffab00; }
+        .header-actions { display: flex; align-items: center; gap: 15px; }
         .action-btn { background: none; border: none; font-size: 16px; cursor: pointer; }
         .action-btn.restart { color: #ffab00; }
         .action-btn.power { color: #ff5252; }
+        .action-btn.start-btn { color: #4caf50; display: none; font-size: 18px; } /* 초록색 시작 버튼 (기본 숨김) */
 
         /* Navigation Tabs */
         .nav-tabs { display: flex; justify-content: space-around; border-bottom: 2px solid #ffff00; margin-top: 10px; padding: 0 10px; }
@@ -117,15 +118,19 @@
                     <input type="text" id="serverTitle" class="server-title" value="noobis" title="클릭하여 서버 이름 변경">
                 </div>
                 <div class="header-actions">
-                    <button class="action-btn restart" title="재시작"><i class="fa-solid fa-rotate-right"></i></button>
-                    <button class="action-btn power" id="powerBtn" onclick="toggleServerPower()" title="서버 정지"><i class="fa-solid fa-square"></i></button>
+                    <div id="runningActionGroup" style="display: flex; align-items: center; gap: 15px;">
+                        <button class="action-btn restart" title="재시작"><i class="fa-solid fa-rotate-right"></i></button>
+                        <button class="action-btn power" id="powerBtn" onclick="toggleServerPower()" title="서버 정지"><i class="fa-solid fa-square"></i></button>
+                    </div>
+                    <button class="action-btn start-btn" id="startBtn" onclick="toggleServerPower()" title="서버 시작"><i class="fa-solid fa-play"></i></button>
+                    
                     <button class="action-btn restart" title="더보기"><i class="fa-solid fa-ellipsis-vertical"></i></button>
                 </div>
             </div>
 
             <div class="nav-tabs">
-                <div class="tab-item" onclick="showTab('console', this)"><i class="fa-solid fa-terminal"></i>콘솔</div>
-                <div class="tab-item active" onclick="showTab('stats', this)"><i class="fa-solid fa-chart-line"></i>통계</div>
+                <div class="tab-item active" onclick="showTab('console', this)"><i class="fa-solid fa-terminal"></i>콘솔</div>
+                <div class="tab-item" onclick="showTab('stats', this)"><i class="fa-solid fa-chart-line"></i>통계</div>
                 <div class="tab-item" onclick="showTab('files', this)"><i class="fa-solid fa-file"></i>파일</div>
                 <div class="tab-item" onclick="showTab('settings', this)"><i class="fa-solid fa-gear"></i>설정</div>
                 <div class="tab-item" onclick="showTab('users', this)"><i class="fa-solid fa-users"></i>사용자</div>
@@ -135,7 +140,7 @@
 
             <div class="content-body">
                 
-                <div id="page-console" class="tab-page">
+                <div id="page-console" class="tab-page active">
                     <div id="console"></div>
                     <div class="command-bar">
                         <div class="command-input-wrapper">
@@ -145,7 +150,7 @@
                     </div>
                 </div>
 
-                <div id="page-stats" class="tab-page active">
+                <div id="page-stats" class="tab-page">
                     <div class="tab-padded">
                         <h3>📊 실시간 서버 성능 통계</h3>
                         <div class="stats-grid">
@@ -245,31 +250,30 @@
         let selectedFileName = "";
         let isServerRunning = true; // 서버 전원 상태 변수
 
-        // 전원 버튼 토글 함수 (로그/메시지 출력 없음)
+        // 전원 버튼 토글 함수 (메시지나 로그 출력 없음)
         function toggleServerPower() {
             isServerRunning = !isServerRunning;
-            const powerBtn = document.getElementById('powerBtn');
+            const runningActionGroup = document.getElementById('runningActionGroup');
+            const startBtn = document.getElementById('startBtn');
             const statusDot = document.getElementById('statusDot');
             const statusDotIcon = document.getElementById('statusDotIcon');
 
             if (isServerRunning) {
-                // 서버 켜짐 상태로 변경
-                powerBtn.innerHTML = '<i class="fa-solid fa-square"></i>';
-                powerBtn.style.color = '#ff5252';
-                powerBtn.title = '서버 정지';
+                // 서버 켜짐 (재시작 및 정지 버튼 그룹 보이기, 초록 시작 버튼 숨기기)
+                runningActionGroup.style.display = 'flex';
+                startBtn.style.display = 'none';
                 statusDot.style.backgroundColor = '#d4e157';
                 statusDotIcon.className = 'fa-solid fa-play';
             } else {
-                // 서버 꺼짐 상태로 변경 (시작 버튼 아이콘 표시)
-                powerBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-                powerBtn.style.color = '#4caf50';
-                powerBtn.title = '서버 시작';
+                // 서버 꺼짐 (재시작 및 정지 버튼 그룹 숨기기, 초록 시작 버튼 보이기)
+                runningActionGroup.style.display = 'none';
+                startBtn.style.display = 'block';
                 statusDot.style.backgroundColor = '#555';
                 statusDotIcon.className = 'fa-solid fa-power-off';
             }
         }
 
-        // 실시간 통계 업데이트 시뮬레이터 (서버가 꺼져있으면 0으로 처리)
+        // 실시간 통계 업데이트 시뮬레이터
         function updateStats() {
             if (!isServerRunning) {
                 document.getElementById('statOnlineUsers').textContent = "0명";
@@ -336,6 +340,7 @@
             updateStats();
         };
 
+        // 탭 전환 함수
         function showTab(tabName, el) {
             document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
@@ -352,4 +357,183 @@
 
         function appendLog(text) {
             consoleElem.textContent += text;
-            console
+            consoleElem.scrollTop = consoleElem.scrollHeight;
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendCommand();
+        }
+
+        function sendCommand() {
+            const input = document.getElementById('cmdInput');
+            if (input.value.trim() !== "") {
+                ws.send(input.value);
+                input.value = "";
+            }
+        }
+
+        function getIconClass(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            if (ext === 'jar') return 'fa-solid fa-brands fa-java';
+            if (ext === 'zip') return 'fa-solid fa-file-zipper';
+            if (['json', 'yml', 'yaml', 'properties'].includes(ext)) return 'fa-solid fa-gear';
+            return 'fa-solid fa-file-lines';
+        }
+
+        function openFile(filename) {
+            if (filename.endsWith('.jar')) return alert(`'${filename}' 실행 가능한 바이너리 파일입니다.`);
+
+            document.getElementById('modalTitle').textContent = filename;
+            document.getElementById('modalFileContent').value = localFileCache[filename] || `# ${filename} 내용이 비어있습니다.`;
+            document.getElementById('fileModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('fileModal').style.display = 'none';
+        }
+
+        async function saveOpenedFile() {
+            const fileName = document.getElementById('modalTitle').textContent;
+            const content = document.getElementById('modalFileContent').value;
+            localFileCache[fileName] = content;
+
+            const blob = new Blob([content], { type: 'text/plain' });
+            const file = new File([blob], fileName);
+            const formData = new FormData();
+            formData.append('mcFile', file);
+
+            try {
+                await fetch(`${BACKEND_URL}/upload`, { method: 'POST', body: formData });
+                alert(`'${fileName}' 수정 사항이 저장되었습니다.`);
+                closeModal();
+            } catch (err) {
+                alert("저장 실패: " + err.message);
+            }
+        }
+
+        /* --- 우클릭 메뉴 및 기능 --- */
+        const contextMenu = document.getElementById('contextMenu');
+
+        document.addEventListener('contextmenu', (e) => {
+            const card = e.target.closest('.file-card');
+            if (card) {
+                e.preventDefault();
+                selectedTargetElement = card;
+                selectedFileName = card.getAttribute('data-filename');
+
+                contextMenu.style.top = `${e.pageY}px`;
+                contextMenu.style.left = `${e.pageX}px`;
+                contextMenu.style.display = 'block';
+            } else {
+                hideContextMenu();
+            }
+        });
+
+        document.addEventListener('click', () => hideContextMenu());
+
+        function hideContextMenu() {
+            contextMenu.style.display = 'none';
+        }
+
+        function renameFile() {
+            hideContextMenu();
+            if (!selectedFileName) return;
+            const newName = prompt("변경할 이름을 입력하세요:", selectedFileName);
+            if (newName && newName !== selectedFileName) {
+                const list = virtualFileSystem[currentPath];
+                const item = list.find(i => i.name === selectedFileName);
+                if (item) item.name = newName;
+
+                if (localFileCache[selectedFileName]) {
+                    localFileCache[newName] = localFileCache[selectedFileName];
+                    delete localFileCache[selectedFileName];
+                }
+                renderExplorer();
+            }
+        }
+
+        function compressFile() {
+            hideContextMenu();
+            if (!selectedFileName) return;
+            const zipName = `${selectedFileName.split('.')[0]}.zip`;
+            
+            const zip = new JSZip();
+            const content = localFileCache[selectedFileName] || "Binary File Content";
+            zip.file(selectedFileName, content);
+            
+            zip.generateAsync({ type: "blob" }).then(function() {
+                virtualFileSystem[currentPath].push({ name: zipName, type: "file" });
+                renderExplorer();
+                alert(`'${selectedFileName}'이(가) '${zipName}'으로 압축되었습니다.`);
+            });
+        }
+
+        function downloadFile() {
+            hideContextMenu();
+            if (!selectedFileName) return;
+            const content = localFileCache[selectedFileName] || "";
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = selectedFileName;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        function deleteFile() {
+            hideContextMenu();
+            if (!selectedFileName) return;
+            if (confirm(`정말로 '${selectedFileName}'을(를) 삭제하시겠습니까?`)) {
+                virtualFileSystem[currentPath] = virtualFileSystem[currentPath].filter(i => i.name !== selectedFileName);
+                delete localFileCache[selectedFileName];
+                renderExplorer();
+            }
+        }
+
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const status = document.getElementById('uploadStatus');
+            if (fileInput.files.length === 0) return alert("파일을 선택하세요.");
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('mcFile', file);
+
+            status.textContent = "업로드 중...";
+            try {
+                const res = await fetch(`${BACKEND_URL}/upload`, { method: 'POST', body: formData });
+                const data = await res.json();
+                status.textContent = data.message;
+                
+                virtualFileSystem[currentPath].push({ name: file.name, type: "file" });
+                renderExplorer();
+            } catch (err) {
+                status.textContent = "업로드 실패: " + err.message;
+            }
+        }
+
+        async function createFileOrFolder() {
+            const inputName = document.getElementById('newFileName').value.trim();
+            const content = document.getElementById('newFileContent').value;
+            const status = document.getElementById('createStatus');
+
+            if (!inputName) return alert("이름을 입력해주세요.");
+
+            const isFolder = !inputName.includes('.');
+            const itemType = isFolder ? "folder" : "file";
+
+            if (!isFolder) {
+                localFileCache[inputName] = content;
+            }
+
+            virtualFileSystem[currentPath].push({ name: inputName, type: itemType });
+            renderExplorer();
+
+            status.textContent = `'${inputName}' ${isFolder ? '폴더' : '파일'}가 정상적으로 생성되었습니다!`;
+
+            document.getElementById('newFileName').value = '';
+            document.getElementById('newFileContent').value = '';
+        }
+    </script>
+</body>
+</html>
