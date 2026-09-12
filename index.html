@@ -64,7 +64,7 @@
         .btn-success { background-color: #388e3c; color: #fff; }
         
         .section-box { margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 20px; }
-        .input-text, .select-box { width: 100%; padding: 8px; background-color: #1a1a1a; border: 1px solid #444; color: #fff; border-radius: 4px; margin-top: 8px; font-size: 13px; outline: none; }
+        .input-text { width: 100%; padding: 8px; background-color: #1a1a1a; border: 1px solid #444; color: #fff; border-radius: 4px; margin-top: 8px; font-size: 13px; outline: none; }
         .file-textarea { width: 100%; height: 80px; padding: 8px; background-color: #1a1a1a; border: 1px solid #444; color: #fff; border-radius: 4px; margin-top: 8px; font-family: monospace; font-size: 12px; outline: none; resize: vertical; }
 
         /* Path & Grid */
@@ -121,8 +121,8 @@
                     <input type="text" id="serverTitle" class="server-title" value="noobis" title="클릭하여 서버 이름 변경">
                 </div>
                 <div class="header-actions">
-                    <button class="action-btn restart" title="재시작"><i class="fa-solid fa-rotate-right"></i></button>
-                    <button class="action-btn power" id="powerBtn" title="서버 정지"><i class="fa-solid fa-square"></i></button>
+                    <button class="action-btn restart" onclick="restartServer()" title="재시작"><i class="fa-solid fa-rotate-right"></i></button>
+                    <button class="action-btn power" id="powerBtn" onclick="stopServer()" title="서버 정지"><i class="fa-solid fa-square"></i></button>
                     <button class="action-btn restart" title="더보기"><i class="fa-solid fa-ellipsis-vertical"></i></button>
                 </div>
             </div>
@@ -208,20 +208,12 @@
                             <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">서버 이름</label>
                             <input type="text" id="settingServerName" class="input-text" value="noobis">
                             
-                            <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">서버 버전</label>
-                            <select id="settingServerVersion" class="select-box">
-                                <option value="1.20.4">Paper 1.20.4</option>
-                                <option value="1.20.1">Paper 1.20.1</option>
-                                <option value="1.19.4">Paper 1.19.4</option>
-                                <option value="1.12.2">Forge 1.12.2</option>
-                            </select>
+                            <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">마크 버전 (직접 입력)</label>
+                            <input type="text" id="settingServerVersion" class="input-text" placeholder="예: 26.2" value="26.2">
 
-                            <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">Java 버전</label>
-                            <select id="settingJavaVersion" class="select-box">
-                                <option value="Java 21">Java 21 (Recommended for 1.20.5+)</option>
-                                <option value="Java 17">Java 17 (Recommended for 1.18 - 1.20.4)</option>
-                                <option value="Java 8">Java 8 (Legacy for 1.12.2)</option>
-                            </select>
+                            <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">Java 버전 (직접 입력)</label>
+                            <input type="text" id="settingJavaVersion" class="input-text" placeholder="예: java 25" value="java 25">
+                            
                             <button class="btn-custom" style="margin-top:15px;" onclick="alert('설정이 저장되었습니다.')">설정 저장</button>
                         </div>
 
@@ -319,12 +311,10 @@
             "ops.json": "[\n  {\n    \"uuid\": \"00000000-0000-0000-0000-000000000000\",\n    \"name\": \"Admin\",\n    \"level\": 4\n  }\n]"
         };
 
-        // 백업 리스트 배열
         let backupList = [
             { name: "backup_2026-06-06.zip", date: "2026-06-06 12:00" }
         ];
 
-        // 권한 보유 사용자 이메일 목록
         let authorizedUsers = [
             "developer@noobis.com"
         ];
@@ -333,6 +323,35 @@
         let selectedTargetElement = null;
         let selectedFileName = "";
         let selectedBackupName = "";
+
+        const consoleElem = document.getElementById('console');
+        const ws = new WebSocket(WS_URL);
+
+        ws.onopen = () => { appendLog("[SYSTEM] 백엔드 콘솔 스트림에 연결되었습니다.\n"); };
+        ws.onmessage = (event) => { appendLog(event.data); };
+
+        function appendLog(text) {
+            consoleElem.textContent += text;
+            consoleElem.scrollTop = consoleElem.scrollHeight;
+        }
+
+        // 실제 서버 정지 명령 전송 (추후 CMD 연결용)
+        function stopServer() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send("stop");
+            } else {
+                appendLog("[SYSTEM] 서버에 연결되어 있지 않아 정지 명령을 보낼 수 없습니다.\n");
+            }
+        }
+
+        // 실제 서버 재시작 명령 전송 (추후 CMD 연결용)
+        function restartServer() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send("restart");
+            } else {
+                appendLog("[SYSTEM] 서버에 연결되어 있지 않아 재시작 명령을 보낼 수 없습니다.\n");
+            }
+        }
 
         // 서버 재설치 기능 ("하겠습니다?" 확인 창)
         function reinstallServer() {
@@ -369,7 +388,6 @@
             alert(`'${email}' 사용자가 콘솔 접근 권한에 추가되었습니다.`);
         }
 
-        // 사용자 삭제 기능
         function removeUser(email) {
             if (confirm(`'${email}' 사용자의 콘솔 접근 권한을 제거하시겠습니까?`)) {
                 authorizedUsers = authorizedUsers.filter(e => e !== email);
@@ -377,7 +395,6 @@
             }
         }
 
-        // 사용자 목록 렌더링
         function renderUserList() {
             const container = document.getElementById('userListContainer');
             container.innerHTML = `
@@ -397,7 +414,6 @@
             });
         }
 
-        // 백업 생성 기능 (저장 버튼)
         function createBackup() {
             const dateStr = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
             const backupName = `backup_${dateStr}.zip`;
@@ -406,7 +422,6 @@
             alert(`서버 파일 백업 '${backupName}'이(가) 완료되었습니다.`);
         }
 
-        // 백업 목록 렌더링
         function renderBackups() {
             const grid = document.getElementById('backupGrid');
             grid.innerHTML = "";
@@ -425,7 +440,6 @@
             });
         }
 
-        // 백업 우클릭 메뉴 액션들
         function restoreBackup() {
             hideAllContextMenus();
             if (confirm(`'${selectedBackupName}' 백업본으로 서버 파일을 복구(불러오기)하시겠습니까?`)) {
@@ -451,7 +465,6 @@
             }
         }
 
-        // 실시간 통계 시뮬레이터 (항상 수치 유지)
         function updateStats() {
             document.getElementById('statOnlineUsers').textContent = (Math.floor(Math.random() * 5) + 3) + "명";
             document.getElementById('statCps').textContent = (Math.random() * 2 + 10).toFixed(1) + " CPS";
@@ -520,17 +533,6 @@
             document.getElementById(`page-${tabName}`).classList.add('active');
         }
 
-        const consoleElem = document.getElementById('console');
-        const ws = new WebSocket(WS_URL);
-
-        ws.onopen = () => { appendLog("[SYSTEM] 백엔드 콘솔 스트림에 연결되었습니다.\n"); };
-        ws.onmessage = (event) => { appendLog(event.data); };
-
-        function appendLog(text) {
-            consoleElem.textContent += text;
-            consoleElem.scrollTop = consoleElem.scrollHeight;
-        }
-
         function handleKeyPress(e) {
             if (e.key === 'Enter') sendCommand();
         }
@@ -571,7 +573,6 @@
             closeModal();
         }
 
-        /* --- 우클릭 메뉴 관리 --- */
         const contextMenu = document.getElementById('contextMenu');
         const backupContextMenu = document.getElementById('backupContextMenu');
 
