@@ -3,12 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Server Panel</title>
+    <title>Server Panel - Login</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- JSZip 라이브러리 (zip 압축용) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #1e1e1e; color: #d4d4d4; height: 100vh; display: flex; overflow: hidden; }
+
+        /* Login Screen Overlay */
+        #loginWrapper { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #1e1e1e; display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .login-card { width: 100%; max-width: 400px; background-color: #2b2b2b; border-radius: 12px; border: 1px solid #3c3c3c; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 20px; }
+        .login-title { font-size: 22px; font-weight: bold; color: #fff; text-align: center; margin-bottom: 10px; }
+        .login-label { font-size: 12px; color: #aaa; margin-bottom: 5px; display: block; }
+        .login-input { width: 100%; padding: 10px; background-color: #1a1a1a; border: 1px solid #444; color: #fff; border-radius: 6px; font-size: 14px; outline: none; }
+        .login-btn { width: 100%; background-color: #ffff00; color: #000; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; margin-top: 10px; }
+        .login-btn:hover { opacity: 0.9; }
+        .login-error { color: #ff5252; font-size: 12px; text-align: center; min-height: 15px; }
+
+        /* Main Panel Wrapper (Hidden by default until login) */
+        #mainPanelWrapper { display: none; width: 100%; height: 100%; display: none; }
 
         /* Left Sidebar */
         .sidebar { width: 220px; background-color: #252526; border-right: 1px solid #333; display: flex; flex-direction: column; justify-content: space-between; padding: 15px 10px; }
@@ -104,176 +118,208 @@
 </head>
 <body>
 
-    <div class="sidebar">
-        <div class="sidebar-top">
-            <i class="fa-solid fa-server"></i> 서버
-        </div>
-        <div class="sidebar-bottom">
-            <div class="sidebar-item"><i class="fa-solid fa-chevron-left"></i> 접기</div>
-            <div class="sidebar-item"><i class="fa-solid fa-right-from-bracket"></i> 로그아웃</div>
+    <!-- 로그인 화면 -->
+    <div id="loginWrapper">
+        <div class="login-card">
+            <div class="login-title"><i class="fa-solid fa-server"></i> Server Panel 로그인</div>
+            <div>
+                <label class="login-label">관리자 이메일</label>
+                <input type="email" id="loginEmail" class="login-input" placeholder="syhblack1@gmail.com">
+            </div>
+            <div>
+                <label class="login-label">비밀번호</label>
+                <input type="password" id="loginPassword" class="login-input" placeholder="비밀번호 입력" onkeypress="handleLoginKeyPress(event)">
+            </div>
+            <div class="login-error" id="loginErrorMsg"></div>
+            <button class="login-btn" onclick="handleLogin()">로그인</button>
         </div>
     </div>
 
-    <div class="main-wrapper">
-        <div class="panel-card">
-            
-            <div class="card-header">
-                <div class="server-name-box">
-                    <div class="status-dot" id="statusDot"><i class="fa-solid fa-play" id="statusDotIcon"></i></div>
-                    <input type="text" id="serverTitle" class="server-title" value="noobis" title="클릭하여 서버 이름 변경" oninput="syncServerTitle(this.value)">
-                </div>
-                <div class="header-actions">
-                    <button class="action-btn start" id="startBtn" onclick="startServer()" title="서버 시작"><i class="fa-solid fa-play"></i></button>
-                    <button class="action-btn restart" id="restartBtn" onclick="restartServer()" title="재시작"><i class="fa-solid fa-rotate-right"></i></button>
-                    <button class="action-btn power" id="powerBtn" onclick="stopServer()" title="서버 정지"><i class="fa-solid fa-square"></i></button>
-                    <button class="action-btn restart" title="더보기"><i class="fa-solid fa-ellipsis-vertical"></i></button>
-                </div>
+    <!-- 메인 패널 화면 (로그인 후 표시) -->
+    <div id="mainPanelWrapper" style="display: none; width: 100%; height: 100%;">
+        <!-- Left Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-top">
+                <i class="fa-solid fa-server"></i> 서버
             </div>
-
-            <div class="nav-tabs">
-                <div class="tab-item active" onclick="showTab('console', this)"><i class="fa-solid fa-terminal"></i>콘솔</div>
-                <div class="tab-item" onclick="showTab('stats', this)"><i class="fa-solid fa-chart-line"></i>통계</div>
-                <div class="tab-item" onclick="showTab('files', this)"><i class="fa-solid fa-file"></i>파일</div>
-                <div class="tab-item" onclick="showTab('settings', this)"><i class="fa-solid fa-gear"></i>설정</div>
-                <div class="tab-item" onclick="showTab('users', this)"><i class="fa-solid fa-users"></i>사용자</div>
-                <div class="tab-item" onclick="showTab('sftp', this)"><i class="fa-solid fa-network-wired"></i>SFTP 정보</div>
-                <div class="tab-item" onclick="showTab('backup', this)"><i class="fa-solid fa-rotate-left"></i>Backup</div>
+            <div class="sidebar-bottom">
+                <div class="sidebar-item" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> 로그아웃</div>
             </div>
+        </div>
 
-            <div class="content-body">
+        <!-- Main Container -->
+        <div class="main-wrapper">
+            <div class="panel-card">
                 
-                <div id="page-console" class="tab-page active">
-                    <div id="console"></div>
-                    <div class="command-bar">
-                        <div class="command-input-wrapper">
-                            <input type="text" id="cmdInput" class="command-input" placeholder="Command" onkeypress="handleKeyPress(event)">
-                        </div>
-                        <button class="send-btn" onclick="sendCommand()"><i class="fa-solid fa-paper-plane"></i></button>
+                <!-- Header -->
+                <div class="card-header">
+                    <div class="server-name-box">
+                        <div class="status-dot" id="statusDot"><i class="fa-solid fa-play" id="statusDotIcon"></i></div>
+                        <input type="text" id="serverTitle" class="server-title" value="noobis" title="클릭하여 서버 이름 변경" oninput="syncServerTitle(this.value)">
+                    </div>
+                    <div class="header-actions">
+                        <button class="action-btn start" id="startBtn" onclick="startServer()" title="서버 시작"><i class="fa-solid fa-play"></i></button>
+                        <button class="action-btn restart" id="restartBtn" onclick="restartServer()" title="재시작"><i class="fa-solid fa-rotate-right"></i></button>
+                        <button class="action-btn power" id="powerBtn" onclick="stopServer()" title="서버 정지"><i class="fa-solid fa-square"></i></button>
+                        <button class="action-btn restart" title="더보기"><i class="fa-solid fa-ellipsis-vertical"></i></button>
                     </div>
                 </div>
 
-                <div id="page-stats" class="tab-page">
-                    <div class="tab-padded">
-                        <h3>📊 실시간 서버 성능 통계</h3>
-                        <div class="stats-grid">
-                            <div class="stat-card">
-                                <div class="stat-title"><i class="fa-solid fa-users"></i> 접속 중인 유저 수</div>
-                                <div class="stat-value" id="statOnlineUsers">0명</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-title"><i class="fa-solid fa-bolt"></i> 실시간 CPS (초당 패킷)</div>
-                                <div class="stat-value" id="statCps">0.0 CPS</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-title"><i class="fa-solid fa-microchip"></i> CPU 사용량</div>
-                                <div class="stat-value" id="statCpu">0.0%</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-title"><i class="fa-solid fa-memory"></i> 메모리 사용량</div>
-                                <div class="stat-value" id="statMemory">0 MB</div>
-                            </div>
-                        </div>
-                    </div>
+                <!-- Navigation Tabs -->
+                <div class="nav-tabs">
+                    <div class="tab-item active" onclick="showTab('console', this)"><i class="fa-solid fa-terminal"></i>콘솔</div>
+                    <div class="tab-item" onclick="showTab('stats', this)"><i class="fa-solid fa-chart-line"></i>통계</div>
+                    <div class="tab-item" onclick="showTab('files', this)"><i class="fa-solid fa-file"></i>파일</div>
+                    <div class="tab-item" onclick="showTab('settings', this)"><i class="fa-solid fa-gear"></i>설정</div>
+                    <div class="tab-item" onclick="showTab('users', this)"><i class="fa-solid fa-users"></i>사용자</div>
+                    <div class="tab-item" onclick="showTab('sftp', this)"><i class="fa-solid fa-network-wired"></i>SFTP 정보</div>
+                    <div class="tab-item" onclick="showTab('backup', this)"><i class="fa-solid fa-rotate-left"></i>Backup</div>
                 </div>
 
-                <div id="page-files" class="tab-page">
-                    <div class="tab-padded">
-                        <div class="section-box">
-                            <div class="path-bar">
-                                <span id="currentPathDisplay">📂 /</span>
-                                <button class="back-btn" id="backBtn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> 상위 폴더로</button>
+                <!-- Main Content Area -->
+                <div class="content-body">
+                    
+                    <!-- 1. 콘솔 탭 -->
+                    <div id="page-console" class="tab-page active">
+                        <div id="console"></div>
+                        <div class="command-bar">
+                            <div class="command-input-wrapper">
+                                <input type="text" id="cmdInput" class="command-input" placeholder="Command" onkeypress="handleKeyPress(event)">
                             </div>
-                            <div class="file-grid" id="fileGrid"></div>
-                        </div>
-
-                        <div class="section-box">
-                            <h3>📤 서버 파일 업로드</h3>
-                            <input type="file" id="fileInput" style="margin-top:10px;">
-                            <br>
-                            <button class="btn-custom" onclick="uploadFile()">업로드 전송</button>
-                            <p id="uploadStatus" style="margin-top: 5px; color: #ffab00; font-size: 12px;"></p>
-                        </div>
-
-                        <div class="section-box" style="border-bottom: none;">
-                            <h3>📝 새 파일 / 폴더 만들기</h3>
-                            <input type="text" id="newFileName" class="input-text" placeholder="이름 입력 (예: folder_name 또는 config.yml)">
-                            <textarea id="newFileContent" class="file-textarea" placeholder="파일 내용 입력... (폴더 생성시 비워둠)"></textarea>
-                            <button class="btn-custom btn-success" onclick="createFileOrFolder()">생성하기</button>
-                            <p id="createStatus" style="margin-top: 5px; color: #81c784; font-size: 12px;"></p>
+                            <button class="send-btn" onclick="sendCommand()"><i class="fa-solid fa-paper-plane"></i></button>
                         </div>
                     </div>
-                </div>
 
-                <div id="page-settings" class="tab-page">
-                    <div class="tab-padded">
-                        <div class="section-box">
-                            <h3>⚙️ 서버 기본 설정</h3>
-                            <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">서버 이름</label>
-                            <input type="text" id="settingServerName" class="input-text" value="noobis" oninput="syncServerTitle(this.value)">
-                            
-                            <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">마크 버전 (직접 입력)</label>
-                            <input type="text" id="settingServerVersion" class="input-text" placeholder="예: 26.2" value="26.2">
-
-                            <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">Java 버전 (직접 입력)</label>
-                            <input type="text" id="settingJavaVersion" class="input-text" placeholder="예: java 25" value="java 25">
-                            
-                            <button class="btn-custom" style="margin-top:15px;" onclick="alert('설정이 저장되었습니다.')">설정 저장</button>
-                        </div>
-
-                        <div class="section-box" style="border-bottom: none;">
-                            <h3>⚠️ 서버 재설치 (초기화)</h3>
-                            <p style="font-size: 12px; color: #aaa; margin-top: 5px;">모든 서버 파일이 삭제되며 공장 초기화 상태로 돌아갑니다.</p>
-                            <button class="btn-custom btn-danger" onclick="reinstallServer()">서버 재설치</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="page-users" class="tab-page">
-                    <div class="tab-padded">
-                        <div class="section-box">
-                            <h3>👥 콘솔(서버 파일) 접근 권한 관리</h3>
-                            <p style="font-size: 12px; color: #aaa; margin-top: 5px;">이메일 주소를 입력하여 콘솔 및 파일을 조작할 수 있는 사용자를 추가하거나 제거할 수 있습니다.</p>
-                            
-                            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                                <input type="email" id="userEmailInput" class="input-text" placeholder="추가할 사용자의 이메일 입력 (예: user@example.com)" style="margin-top: 0;">
-                                <button class="btn-custom btn-success" style="margin-top: 0; white-space: nowrap;" onclick="addUser()">사용자 추가</button>
-                            </div>
-                        </div>
-
-                        <div class="section-box" style="border-bottom: none;">
-                            <h3>📋 권한이 있는 사용자 목록</h3>
-                            <div id="userListContainer" style="margin-top: 10px;">
-                                <div class="user-row">
-                                    <span>syhblack1@gmail.com (관리자)</span>
-                                    <span style="color: #888; font-size:12px;">기본 관리자</span>
+                    <!-- 2. 통계 탭 -->
+                    <div id="page-stats" class="tab-page">
+                        <div class="tab-padded">
+                            <h3>📊 실시간 서버 성능 통계</h3>
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-title"><i class="fa-solid fa-users"></i> 접속 중인 유저 수</div>
+                                    <div class="stat-value" id="statOnlineUsers">0명</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-title"><i class="fa-solid fa-bolt"></i> 실시간 CPS (초당 패킷)</div>
+                                    <div class="stat-value" id="statCps">0.0 CPS</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-title"><i class="fa-solid fa-microchip"></i> CPU 사용량</div>
+                                    <div class="stat-value" id="statCpu">0.0%</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-title"><i class="fa-solid fa-memory"></i> 메모리 사용량</div>
+                                    <div class="stat-value" id="statMemory">0 MB</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div id="page-sftp" class="tab-page"><div class="tab-padded"><h3>🔌 SFTP 접속 정보</h3></div></div>
+                    <!-- 3. 파일 탭 -->
+                    <div id="page-files" class="tab-page">
+                        <div class="tab-padded">
+                            <div class="section-box">
+                                <div class="path-bar">
+                                    <span id="currentPathDisplay">📂 /</span>
+                                    <button class="back-btn" id="backBtn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> 상위 폴더로</button>
+                                </div>
+                                <div class="file-grid" id="fileGrid"></div>
+                            </div>
 
-                <div id="page-backup" class="tab-page">
-                    <div class="tab-padded">
-                        <div class="section-box">
-                            <h3>📦 서버 파일 백업</h3>
-                            <p style="font-size: 12px; color: #aaa; margin-top: 5px;">저장 버튼을 누르면 현재 서버의 모든 파일 압축 백업본이 생성됩니다.</p>
-                            <button class="btn-custom btn-success" onclick="createBackup()">백업 저장하기</button>
-                        </div>
+                            <div class="section-box">
+                                <h3>📤 서버 파일 업로드</h3>
+                                <input type="file" id="fileInput" style="margin-top:10px;">
+                                <br>
+                                <button class="btn-custom" onclick="uploadFile()">업로드 전송</button>
+                                <p id="uploadStatus" style="margin-top: 5px; color: #ffab00; font-size: 12px;"></p>
+                            </div>
 
-                        <div class="section-box" style="border-bottom: none;">
-                            <h3>📂 백업 목록 (우클릭하여 관리)</h3>
-                            <p style="font-size: 11px; color: #777; margin-top: 3px;">* 백업 항목을 우클릭하면 [불러오기, 다운로드, 삭제] 메뉴가 나타납니다.</p>
-                            <div id="backupGrid" class="file-grid" style="margin-top: 15px;"></div>
+                            <div class="section-box" style="border-bottom: none;">
+                                <h3>📝 새 파일 / 폴더 만들기</h3>
+                                <input type="text" id="newFileName" class="input-text" placeholder="이름 입력 (예: folder_name 또는 config.yml)">
+                                <textarea id="newFileContent" class="file-textarea" placeholder="파일 내용 입력... (폴더 생성시 비워둠)"></textarea>
+                                <button class="btn-custom btn-success" onclick="createFileOrFolder()">생성하기</button>
+                                <p id="createStatus" style="margin-top: 5px; color: #81c784; font-size: 12px;"></p>
+                            </div>
                         </div>
                     </div>
-                </div>
 
+                    <!-- 4. 설정 탭 -->
+                    <div id="page-settings" class="tab-page">
+                        <div class="tab-padded">
+                            <div class="section-box">
+                                <h3>⚙️ 서버 기본 설정</h3>
+                                <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">서버 이름</label>
+                                <input type="text" id="settingServerName" class="input-text" value="noobis" oninput="syncServerTitle(this.value)">
+                                
+                                <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">마크 버전 (직접 입력)</label>
+                                <input type="text" id="settingServerVersion" class="input-text" placeholder="예: 26.2" value="26.2">
+
+                                <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">Java 버전 (직접 입력)</label>
+                                <input type="text" id="settingJavaVersion" class="input-text" placeholder="예: java 25" value="java 25">
+                                
+                                <button class="btn-custom" style="margin-top:15px;" onclick="alert('설정이 저장되었습니다.')">설정 저장</button>
+                            </div>
+
+                            <div class="section-box" style="border-bottom: none;">
+                                <h3>⚠️ 서버 재설치 (초기화)</h3>
+                                <p style="font-size: 12px; color: #aaa; margin-top: 5px;">모든 서버 파일이 삭제되며 공장 초기화 상태로 돌아갑니다.</p>
+                                <button class="btn-custom btn-danger" onclick="reinstallServer()">서버 재설치</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5. 사용자 탭 -->
+                    <div id="page-users" class="tab-page">
+                        <div class="tab-padded">
+                            <div class="section-box">
+                                <h3>👥 콘솔(서버 파일) 접근 권한 관리</h3>
+                                <p style="font-size: 12px; color: #aaa; margin-top: 5px;">이메일 주소를 입력하여 콘솔 및 파일을 조작할 수 있는 사용자를 추가하거나 제거할 수 있습니다.</p>
+                                
+                                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                                    <input type="email" id="userEmailInput" class="input-text" placeholder="추가할 사용자의 이메일 입력 (예: user@example.com)" style="margin-top: 0;">
+                                    <button class="btn-custom btn-success" style="margin-top: 0; white-space: nowrap;" onclick="addUser()">사용자 추가</button>
+                                </div>
+                            </div>
+
+                            <div class="section-box" style="border-bottom: none;">
+                                <h3>📋 권한이 있는 사용자 목록</h3>
+                                <div id="userListContainer" style="margin-top: 10px;">
+                                    <div class="user-row">
+                                        <span>syhblack1@gmail.com (관리자)</span>
+                                        <span style="color: #888; font-size:12px;">기본 관리자</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 6. SFTP 탭 -->
+                    <div id="page-sftp" class="tab-page"><div class="tab-padded"><h3>🔌 SFTP 접속 정보</h3></div></div>
+
+                    <!-- 7. Backup 탭 -->
+                    <div id="page-backup" class="tab-page">
+                        <div class="tab-padded">
+                            <div class="section-box">
+                                <h3>📦 서버 파일 백업</h3>
+                                <p style="font-size: 12px; color: #aaa; margin-top: 5px;">저장 버튼을 누르면 현재 서버의 모든 파일 압축 백업본이 생성됩니다.</p>
+                                <button class="btn-custom btn-success" onclick="createBackup()">백업 저장하기</button>
+                            </div>
+
+                            <div class="section-box" style="border-bottom: none;">
+                                <h3>📂 백업 목록 (우클릭하여 관리)</h3>
+                                <p style="font-size: 11px; color: #777; margin-top: 3px;">* 백업 항목을 우클릭하면 [불러오기, 다운로드, 삭제] 메뉴가 나타납니다.</p>
+                                <div id="backupGrid" class="file-grid" style="margin-top: 15px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- 일반 파일 우클릭 메뉴 -->
     <div class="context-menu" id="contextMenu">
         <div class="context-menu-item" onclick="renameFile()"><i class="fa-solid fa-pen"></i> 이름 수정</div>
         <div class="context-menu-item" onclick="compressFile()"><i class="fa-solid fa-file-zipper"></i> 압축 (.zip)</div>
@@ -281,12 +327,14 @@
         <div class="context-menu-item danger" onclick="deleteFile()"><i class="fa-solid fa-trash"></i> 삭제</div>
     </div>
 
+    <!-- 백업 전용 우클릭 컨텍스트 메뉴 -->
     <div class="context-menu" id="backupContextMenu">
         <div class="context-menu-item" onclick="restoreBackup()"><i class="fa-solid fa-rotate-left"></i> 불러오기</div>
         <div class="context-menu-item" onclick="downloadBackup()"><i class="fa-solid fa-download"></i> 다운로드</div>
         <div class="context-menu-item danger" onclick="deleteBackup()"><i class="fa-solid fa-trash"></i> 삭제</div>
     </div>
 
+    <!-- 파일 열기 모달 팝업창 -->
     <div class="modal" id="fileModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -302,44 +350,87 @@
         const BACKEND_URL = "https://mc-hosting-6fri.onrender.com";
         const WS_URL = "wss://mc-hosting-6fri.onrender.com";
 
-        // 처음에 완벽히 비워둔 파일 시스템
-        let virtualFileSystem = {
-            "/": []
-        };
+        // 기본 관리자 계정 정보 (요청하신 이메일과 임시 비밀번호)
+        const ADMIN_EMAIL = "syhblack1@gmail.com";
+        const ADMIN_PASSWORD = "admin1234"; // 필요시 변경 가능
 
+        let virtualFileSystem = { "/": [] };
         let localFileCache = {};
-
-        // 백업 데이터 저장소 (내부에 실제 파일 상태를 백업할 수 있도록 구조 고도화)
         let backupList = [];
-
         let authorizedUsers = [];
 
         let currentPath = "/";
         let selectedTargetElement = null;
         let selectedFileName = "";
         let selectedBackupName = "";
+        let ws = null;
+
+        function handleLoginKeyPress(e) {
+            if (e.key === 'Enter') handleLogin();
+        }
+
+        function handleLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            const errorMsg = document.getElementById('loginErrorMsg');
+
+            if (email !== ADMIN_EMAIL) {
+                errorMsg.textContent = "등록되지 않은 관리자 이메일입니다. (syhblack1@gmail.com만 가능)";
+                return;
+            }
+            if (password !== ADMIN_PASSWORD) {
+                errorMsg.textContent = "비밀번호가 일치하지 않습니다. (초기 비밀번호: admin1234)";
+                return;
+            }
+
+            // 로그인 성공 시 로그인 화면 숨기고 메인 패널 표시
+            document.getElementById('loginWrapper').style.display = 'none';
+            document.getElementById('mainPanelWrapper').style.display = 'flex';
+
+            // 웹소켓 연결 및 초기화 실행
+            initPanel();
+        }
+
+        function logout() {
+            if (confirm("로그아웃 하시겠습니까?")) {
+                if (ws) ws.close();
+                document.getElementById('mainPanelWrapper').style.display = 'none';
+                document.getElementById('loginWrapper').style.display = 'flex';
+                document.getElementById('loginPassword').value = '';
+                document.getElementById('loginErrorMsg').textContent = '';
+            }
+        }
+
+        function initPanel() {
+            ws = new WebSocket(WS_URL);
+
+            ws.onopen = () => { appendLog("[SYSTEM] 백엔드 콘솔 스트림에 연결되었습니다.\n"); };
+            ws.onmessage = (event) => { 
+                const msg = event.data;
+                appendLog(msg);
+                
+                if (msg.includes("Stopping the server") || msg.includes("Server stopped")) {
+                    setServerState(false);
+                } else if (msg.includes("Done") || msg.includes("Running")) {
+                    setServerState(true);
+                }
+            };
+
+            renderExplorer();
+            renderBackups();
+            renderUserList();
+            updateStats();
+            setServerState(true);
+        }
 
         const consoleElem = document.getElementById('console');
-        const ws = new WebSocket(WS_URL);
-
-        ws.onopen = () => { appendLog("[SYSTEM] 백엔드 콘솔 스트림에 연결되었습니다.\n"); };
-        ws.onmessage = (event) => { 
-            const msg = event.data;
-            appendLog(msg);
-            
-            if (msg.includes("Stopping the server") || msg.includes("Server stopped")) {
-                setServerState(false);
-            } else if (msg.includes("Done") || msg.includes("Running")) {
-                setServerState(true);
-            }
-        };
 
         function appendLog(text) {
+            if (!consoleElem) return;
             consoleElem.textContent += text;
             consoleElem.scrollTop = consoleElem.scrollHeight;
         }
 
-        // 서버 이름 실시간 동기화 함수
         function syncServerTitle(val) {
             document.getElementById('serverTitle').value = val;
             document.getElementById('settingServerName').value = val;
@@ -351,6 +442,8 @@
             const startBtn = document.getElementById('startBtn');
             const restartBtn = document.getElementById('restartBtn');
             const powerBtn = document.getElementById('powerBtn');
+
+            if (!statusDot) return;
 
             if (isRunning) {
                 statusDot.classList.remove('offline');
@@ -420,8 +513,8 @@
             if (!email || !email.includes('@')) {
                 return alert("올바른 이메일 주소를 입력해주세요.");
             }
-            if (authorizedUsers.includes(email)) {
-                return alert("이미 등록된 사용자입니다.");
+            if (authorizedUsers.includes(email) || email === ADMIN_EMAIL) {
+                return alert("이미 등록되었거나 관리자 계정입니다.");
             }
 
             authorizedUsers.push(email);
@@ -439,6 +532,7 @@
 
         function renderUserList() {
             const container = document.getElementById('userListContainer');
+            if (!container) return;
             container.innerHTML = `
                 <div class="user-row">
                     <span>syhblack1@gmail.com (관리자)</span>
@@ -456,12 +550,10 @@
             });
         }
 
-        // 백업 저장 (현재 파일 시스템 상태를 통째로 스냅샷 복사하여 저장)
         function createBackup() {
             const dateStr = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
             const backupName = `backup_${dateStr}.zip`;
             
-            // 현재 가상 파일 시스템과 파일 캐시를 깊은 복사(Deep Copy)하여 백업에 보존
             backupList.push({ 
                 name: backupName, 
                 date: new Date().toLocaleString(),
@@ -475,6 +567,7 @@
 
         function renderBackups() {
             const grid = document.getElementById('backupGrid');
+            if (!grid) return;
             grid.innerHTML = "";
             if (backupList.length === 0) {
                 grid.innerHTML = "<span style='font-size:12px; color:#777;'>저장된 백업 파일이 없습니다.</span>";
@@ -491,13 +584,12 @@
             });
         }
 
-        // 백업 불러오기 (해당 백업의 파일 시스템 상태로 원복)
         function restoreBackup() {
             hideAllContextMenus();
             const targetBackup = backupList.find(b => b.name === selectedBackupName);
             if (!targetBackup) return alert("백업 파일을 찾을 수 없습니다.");
 
-            if (confirm(`'${selectedBackupName}' 백업본으로 서버 파일을 복구(불러오기)하시겠습니까? 현재 파일이 백업 시점의 파일로 덮어씌워집니다.`)) {
+            if (confirm(`'${selectedBackupName}' 백업본으로 서버 파일을 복구(불러오기)하시겠습니까?`)) {
                 virtualFileSystem = JSON.parse(JSON.stringify(targetBackup.fs));
                 localFileCache = JSON.parse(JSON.stringify(targetBackup.cache));
                 currentPath = "/";
@@ -526,10 +618,10 @@
             }
         }
 
-        // 통계 0으로 유지 (서버가 시작되면 수치가 올라갈 수 있도록 구성하되 기본값 0)
         function updateStats() {
-            // 서버가 정지 상태일 때는 0 유지, 켜져있을 때만 수치 변화 등 확장 가능하도록 설정
-            document.getElementById('statOnlineUsers').textContent = "0명";
+            const u = document.getElementById('statOnlineUsers');
+            if (!u) return;
+            u.textContent = "0명";
             document.getElementById('statCps').textContent = "0.0 CPS";
             document.getElementById('statCpu').textContent = "0.0%";
             document.getElementById('statMemory').textContent = "0 MB";
@@ -540,6 +632,8 @@
             const grid = document.getElementById('fileGrid');
             const pathDisplay = document.getElementById('currentPathDisplay');
             const backBtn = document.getElementById('backBtn');
+
+            if (!grid) return;
 
             grid.innerHTML = "";
             pathDisplay.textContent = `📂 ${currentPath}`;
@@ -580,14 +674,6 @@
             currentPath = parts.join('/') || "/";
             renderExplorer();
         }
-
-        window.onload = () => {
-            renderExplorer();
-            renderBackups();
-            renderUserList();
-            updateStats();
-            setServerState(true);
-        };
 
         function showTab(tabName, el) {
             document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
