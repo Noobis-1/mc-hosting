@@ -17,28 +17,30 @@ app.use(cors());
 app.use(fileUpload());
 app.use(express.json());
 
-// 절대 경로로 mc_server 폴더 지정 (경로 꼬임 방지)
-const MC_DIR = path.join(__dirname, 'mc_server');
+// 절대 경로로 확실하게 mc_server 폴더 고정
+const MC_DIR = path.resolve(__dirname, 'mc_server');
 if (!fs.existsSync(MC_DIR)) {
     fs.mkdirSync(MC_DIR, { recursive: true });
 }
+console.log('현재 설정된 마인크래프트 서버 폴더 경로:', MC_DIR);
 
 app.get('/', (req, res) => {
     res.send('마인크래프트 호스팅 백엔드 서버 작동 중!');
 });
 
-// 파일 업로드 (어떤 이름으로 올려도 자동으로 server.jar로 복사되거나 저장됨)
+// 파일 업로드 처리
 app.post('/upload', (req, res) => {
     if (!req.files || !req.files.mcFile) {
         return res.status(400).json({ success: false, message: '업로드할 파일이 없습니다.' });
     }
 
     const file = req.files.mcFile;
-    const savePath = path.join(MC_DIR, 'server.jar'); // 무조건 server.jar로 저장하여 인식 오류 원천 차단
+    const savePath = path.join(MC_DIR, 'server.jar'); // 무조건 server.jar로 저장
 
     file.mv(savePath, (err) => {
         if (err) return res.status(500).json({ success: false, message: err.message });
-        res.json({ success: true, message: `파일 업로드 및 server.jar 적용 완료!` });
+        console.log('파일 업로드 성공:', savePath);
+        res.json({ success: true, message: `server.jar 업로드 완료!` });
     });
 });
 
@@ -49,7 +51,7 @@ app.get('/files', (req, res) => {
     });
 });
 
-let mcProcess = null; // 마인크래프트 서버 프로세스
+let mcProcess = null;
 
 wss.on('connection', (ws) => {
     ws.send('[SYSTEM] 마인크래프트 웹 콘솔에 연결되었습니다.\r\n');
@@ -70,10 +72,10 @@ wss.on('connection', (ws) => {
             ws.send('[SYSTEM] 마인크래프트 서버를 시작합니다...\r\n');
 
             const jarPath = path.join(MC_DIR, 'server.jar');
-            console.log('서버 시작 시도 - jar 경로:', jarPath);
+            console.log('서버 시작 시 찾는 jar 경로:', jarPath);
 
             if (!fs.existsSync(jarPath)) {
-                ws.send('[SYSTEM] 에러: mc_server 폴더에 server.jar 파일이 없습니다. 파일을 먼저 업로드하세요!\r\n');
+                ws.send(`[SYSTEM] 에러: ${jarPath} 경로에 server.jar가 없습니다.\r\n`);
                 return;
             }
 
