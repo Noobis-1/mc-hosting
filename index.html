@@ -137,7 +137,6 @@
 </head>
 <body>
 
-    <!-- 로그인 화면 -->
     <div id="loginWrapper">
         <div class="login-card">
             <div class="login-title"><i class="fa-solid fa-server"></i> Server Panel 로그인</div>
@@ -154,12 +153,10 @@
         </div>
     </div>
 
-    <!-- 서버 선택 대시보드 화면 -->
     <div id="serverListWrapper" style="display: none;">
         <div class="dashboard-sidebar">
             <div class="sidebar-top-group">
                 <div class="sidebar-top" onclick="goToServerList()"><i class="fa-solid fa-server"></i> 서버</div>
-                <!-- syhblack1@gmail.com 계정에게만 표시되는 글로벌 계정 관리 메뉴 -->
                 <div id="globalUserManageMenu" class="sidebar-menu-item" onclick="openGlobalUserModal()" style="display: none;">
                     <i class="fa-solid fa-user-gear"></i> 계정 관리
                 </div>
@@ -171,16 +168,13 @@
         <div class="dashboard-main">
             <div class="dashboard-header-row">
                 <div class="dashboard-title">서버 목록</div>
-                <!-- syhblack1@gmail.com 계정에게만 보이는 서버 추가 버튼 -->
                 <button id="createServerBtn" class="btn-custom btn-success" style="margin-top:0; display: none;" onclick="createNewServerPrompt()">+ 서버 추가</button>
             </div>
             <div id="serverCardGrid" class="server-card-grid"></div>
         </div>
     </div>
 
-    <!-- 메인 패널 화면 (개별 서버 콘솔/파일 등) -->
     <div id="mainPanelWrapper" style="display: none; width: 100%; height: 100%;">
-        <!-- Left Sidebar -->
         <div class="sidebar">
             <div class="sidebar-top-group">
                 <div class="sidebar-top" onclick="goToServerList()"><i class="fa-solid fa-arrow-left"></i> 서버 목록으로</div>
@@ -190,11 +184,8 @@
             </div>
         </div>
 
-        <!-- Main Container -->
         <div class="main-wrapper">
             <div class="panel-card">
-                
-                <!-- Header -->
                 <div class="card-header">
                     <div class="server-name-box">
                         <div class="status-dot" id="statusDot"><i class="fa-solid fa-play" id="statusDotIcon"></i></div>
@@ -208,7 +199,6 @@
                     </div>
                 </div>
 
-                <!-- Navigation Tabs -->
                 <div class="nav-tabs">
                     <div class="tab-item active" onclick="showTab('console', this)"><i class="fa-solid fa-terminal"></i>콘솔</div>
                     <div class="tab-item" onclick="showTab('stats', this)"><i class="fa-solid fa-chart-line"></i>통계</div>
@@ -219,10 +209,7 @@
                     <div class="tab-item" onclick="showTab('backup', this)"><i class="fa-solid fa-rotate-left"></i>Backup</div>
                 </div>
 
-                <!-- Main Content Area -->
                 <div class="content-body">
-                    
-                    <!-- 1. 콘솔 탭 -->
                     <div id="page-console" class="tab-page active">
                         <div id="console"></div>
                         <div class="command-bar">
@@ -233,7 +220,6 @@
                         </div>
                     </div>
 
-                    <!-- 2. 통계 탭 -->
                     <div id="page-stats" class="tab-page">
                         <div class="tab-padded">
                             <h3>📊 실시간 서버 성능 통계</h3>
@@ -258,7 +244,6 @@
                         </div>
                     </div>
 
-                    <!-- 3. 파일 탭 -->
                     <div id="page-files" class="tab-page">
                         <div class="tab-padded">
                             <div class="section-box">
@@ -287,7 +272,6 @@
                         </div>
                     </div>
 
-                    <!-- 4. 설정 탭 -->
                     <div id="page-settings" class="tab-page">
                         <div class="tab-padded">
                             <div class="section-box">
@@ -312,7 +296,6 @@
                         </div>
                     </div>
 
-                    <!-- 5. 사용자 탭 (현재 서버 접근 권한 관리) -->
                     <div id="page-users" class="tab-page">
                         <div class="tab-padded">
                             <div class="section-box">
@@ -332,10 +315,8 @@
                         </div>
                     </div>
 
-                    <!-- 6. SFTP 탭 -->
                     <div id="page-sftp" class="tab-page"><div class="tab-padded"><h3>🔌 SFTP 접속 정보</h3></div></div>
 
-                    <!-- 7. Backup 탭 -->
                     <div id="page-backup" class="tab-page">
                         <div class="tab-padded">
                             <div class="section-box">
@@ -357,7 +338,6 @@
         </div>
     </div>
 
-    <!-- 글로벌 계정 관리 모달 (syhblack1@gmail.com 전용) -->
     <div class="modal" id="globalUserModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -379,18 +359,15 @@
         </div>
     </div>
 
-    <!-- 서버 카드 우클릭 메뉴 -->
     <div class="context-menu" id="serverContextMenu">
         <div class="context-menu-item danger" onclick="deleteServerItem()"><i class="fa-solid fa-trash"></i> 삭제</div>
     </div>
 
-    <!-- 글로벌 계정 우클릭 메뉴 -->
     <div class="context-menu" id="accountContextMenu">
         <div class="context-menu-item" onclick="changeAccountPassword()"><i class="fa-solid fa-key"></i> 비밀번호 변경</div>
         <div class="context-menu-item danger" onclick="deleteAccountItem()"><i class="fa-solid fa-trash"></i> 삭제</div>
     </div>
 
-    <!-- 일반 파일 우클릭 메뉴 -->
     <div class="context-menu" id="contextMenu">
         <div class="context-menu-item" onclick="renameFile()"><i class="fa-solid fa-pen"></i> 이름 수정</div>
         <div class="context-menu-item" onclick="compressFile()"><i class="fa-solid fa-file-zipper"></i> 압축 (.zip)</div>
@@ -398,14 +375,12 @@
         <div class="context-menu-item danger" onclick="deleteFile()"><i class="fa-solid fa-trash"></i> 삭제</div>
     </div>
 
-    <!-- 백업 전용 우클릭 컨텍스트 메뉴 -->
     <div class="context-menu" id="backupContextMenu">
         <div class="context-menu-item" onclick="restoreBackup()"><i class="fa-solid fa-rotate-left"></i> 불러오기</div>
         <div class="context-menu-item" onclick="downloadBackup()"><i class="fa-solid fa-download"></i> 다운로드</div>
         <div class="context-menu-item danger" onclick="deleteBackup()"><i class="fa-solid fa-trash"></i> 삭제</div>
     </div>
 
-    <!-- 파일 열기 모달 팝업창 -->
     <div class="modal" id="fileModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -419,17 +394,18 @@
 
     <script>
         const WS_URL = "wss://mc-hosting-6fri.onrender.com";
-
         const ADMIN_EMAIL = "syhblack1@gmail.com";
         
-        // 전체 시스템에 등록된 계정 목록 (이메일: 비밀번호)
-        let userAccounts = {
+        // localStorage에서 계정 정보를 불러오거나 없으면 기본값 설정
+        let userAccounts = JSON.parse(localStorage.getItem('serverPanel_userAccounts')) || {
             "syhblack1@gmail.com": "admin1234"
         };
 
-        // 처음에는 서버 목록이 비어있음
-        let servers = [];
+        function saveAccountsToStorage() {
+            localStorage.setItem('serverPanel_userAccounts', JSON.stringify(userAccounts));
+        }
 
+        let servers = [];
         let currentLoggedInEmail = "";
         let currentServer = null;
 
@@ -458,7 +434,6 @@
             currentLoggedInEmail = email;
             document.getElementById('loginWrapper').style.display = 'none';
             
-            // syhblack1 계정일 경우 대시보드 내 계정관리 메뉴 및 서버 추가 버튼 표시
             if (email === ADMIN_EMAIL) {
                 document.getElementById('globalUserManageMenu').style.display = 'flex';
                 document.getElementById('createServerBtn').style.display = 'block';
@@ -527,6 +502,7 @@
                 id: srvName,
                 name: srvName,
                 running: false,
+                logHistory: "", // 서버별 콘솔 로그 저장용
                 users: [ADMIN_EMAIL],
                 fs: { "/": [] },
                 cache: {},
@@ -555,13 +531,16 @@
             document.getElementById('serverTitle').value = currentServer.name;
             document.getElementById('settingServerName').value = currentServer.name;
 
+            // 콘솔 화면에 해당 서버의 로그 기록 불러오기
+            document.getElementById('console').textContent = currentServer.logHistory || "";
+
             initPanel();
         }
 
         function initPanel() {
             ws = new WebSocket(WS_URL);
 
-            ws.onopen = () => { appendLog("[SYSTEM] 백엔드 콘솔 스트림에 연결되었습니다.\n"); };
+            ws.onopen = () => { /* 초기 자동 출력 텍스트 제거 완료 */ };
             ws.onmessage = (event) => { 
                 const msg = event.data;
                 appendLog(msg);
@@ -588,6 +567,9 @@
             if (!consoleElem) return;
             consoleElem.textContent += text;
             consoleElem.scrollTop = consoleElem.scrollHeight;
+            if (currentServer) {
+                currentServer.logHistory = consoleElem.textContent; // 서버별 로그 저장
+            }
         }
 
         function syncServerTitle(val) {
@@ -666,7 +648,6 @@
             }
         }
 
-        // 개별 서버 사용자 권한 관리
         function addServerUser() {
             const emailInput = document.getElementById('serverUserEmailInput');
             const email = emailInput.value.trim();
@@ -706,7 +687,6 @@
             });
         }
 
-        // 글로벌 계정 관리 모달 관련 기능
         function openGlobalUserModal() {
             document.getElementById('globalUserModal').style.display = 'flex';
             renderGlobalUserList();
@@ -723,15 +703,18 @@
             if (!email || !email.includes('@') || !password) {
                 return alert("유효한 이메일과 비밀번호를 입력해주세요.");
             }
-            if (userAccounts[email]) {
+            
+            // 기존 계정 목록(userAccounts)에 이미 존재하는지 엄격하게 확인
+            if (userAccounts.hasOwnProperty(email)) {
                 return alert("이미 존재하는 계정 이메일입니다.");
             }
 
             userAccounts[email] = password;
+            saveAccountsToStorage();
             renderGlobalUserList();
             document.getElementById('newAccEmail').value = '';
             document.getElementById('newAccPassword').value = '';
-            alert(`새로운 계정 '${email}'이(가) 정상적으로 생성되었습니다. 이제 이 정보로 로그인이 가능합니다.`);
+            alert(`새로운 계정 '${email}'이(가) 정상적으로 생성되었습니다.`);
         }
 
         function renderGlobalUserList() {
@@ -741,12 +724,10 @@
             Object.keys(userAccounts).forEach(email => {
                 const row = document.createElement('div');
                 row.className = 'user-row';
-                row.setAttribute('data- acc-email', email);
                 row.innerHTML = `
                     <span>${email} ${email === ADMIN_EMAIL ? '(기본 관리자)' : ''}</span>
                     <span style="color: #888; font-size:12px;">우클릭하여 관리</span>
                 `;
-                // 행 자체에 우클릭 이벤트 부착
                 row.oncontextmenu = (e) => {
                     e.preventDefault();
                     hideAllContextMenus();
@@ -766,6 +747,7 @@
             const newPw = prompt(`'${selectedAccountEmail}' 계정의 새 비밀번호를 입력하세요:`);
             if (newPw) {
                 userAccounts[selectedAccountEmail] = newPw;
+                saveAccountsToStorage();
                 alert("비밀번호가 성공적으로 변경되었습니다.");
             }
         }
@@ -778,6 +760,7 @@
             }
             if (confirm(`정말로 계정 '${selectedAccountEmail}'을(를) 삭제하시겠습니까?`)) {
                 delete userAccounts[selectedAccountEmail];
+                saveAccountsToStorage();
                 renderGlobalUserList();
             }
         }
@@ -810,7 +793,6 @@
                 const card = document.createElement('div');
                 card.className = 'file-card';
                 card.setAttribute('data-backupname', item.name);
-                
                 card.innerHTML = `<i class="fa-solid fa-file-zipper file-icon" style="color: #ffab00;"></i><span class="file-name">${item.name}</span>`;
                 grid.appendChild(card);
             });
