@@ -69,7 +69,7 @@ wss.on('connection', (ws) => {
                 return;
             }
 
-            ws.send('[SYSTEM] 마인크래프트 서버를 시작합니다...\r\n');
+            ws.send('[SYSTEM] 마인크래프트 서버를 시작합니다 (RAM 10GB 할당)...\r\n');
 
             const jarPath = path.join(MC_DIR, 'server.jar');
             console.log('서버 시작 시 찾는 jar 경로:', jarPath);
@@ -86,8 +86,8 @@ wss.on('connection', (ws) => {
                 ws.send('[SYSTEM] eula.txt 파일이 자동으로 생성되었습니다.\r\n');
             }
 
-            // 자바 프로세스 실행
-            mcProcess = spawn('java', ['-Xmx1024M', '-Xms1024M', '-jar', 'server.jar', 'nogui'], {
+            // 자바 프로세스 실행 (RAM 10GB = 10240M 설정)
+            mcProcess = spawn('java', ['-Xmx10240M', '-Xms10240M', '-jar', 'server.jar', 'nogui'], {
                 cwd: MC_DIR,
                 shell: true
             });
