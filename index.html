@@ -137,6 +137,7 @@
 </head>
 <body>
 
+    <!-- 로그인 화면 -->
     <div id="loginWrapper">
         <div class="login-card">
             <div class="login-title"><i class="fa-solid fa-server"></i> Server Panel 로그인</div>
@@ -153,6 +154,7 @@
         </div>
     </div>
 
+    <!-- 서버 선택 대시보드 화면 -->
     <div id="serverListWrapper" style="display: none;">
         <div class="dashboard-sidebar">
             <div class="sidebar-top-group">
@@ -174,6 +176,7 @@
         </div>
     </div>
 
+    <!-- 메인 패널 화면 -->
     <div id="mainPanelWrapper" style="display: none; width: 100%; height: 100%;">
         <div class="sidebar">
             <div class="sidebar-top-group">
@@ -338,6 +341,7 @@
         </div>
     </div>
 
+    <!-- 글로벌 계정 관리 모달 -->
     <div class="modal" id="globalUserModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -359,6 +363,7 @@
         </div>
     </div>
 
+    <!-- 컨텍스트 메뉴들 -->
     <div class="context-menu" id="serverContextMenu">
         <div class="context-menu-item danger" onclick="deleteServerItem()"><i class="fa-solid fa-trash"></i> 삭제</div>
     </div>
@@ -381,6 +386,7 @@
         <div class="context-menu-item danger" onclick="deleteBackup()"><i class="fa-solid fa-trash"></i> 삭제</div>
     </div>
 
+    <!-- 파일 열기 모달 -->
     <div class="modal" id="fileModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -395,6 +401,7 @@
     <script>
         const WS_URL = "wss://mc-hosting-6fri.onrender.com";
         const ADMIN_EMAIL = "syhblack1@gmail.com";
+        const SESSION_DURATION = 60 * 60 * 1000; // 1시간 (밀리초)
         
         // localStorage에서 계정 정보 불러오기 (없으면 기본값 설정 및 저장)
         let userAccounts = JSON.parse(localStorage.getItem('serverPanel_userAccounts')) || {
@@ -421,6 +428,41 @@
         let selectedAccountEmail = "";
         let ws = null;
 
+        // 페이지 로드 시 세션(로그인 시간) 검사 수행
+        window.addEventListener('DOMContentLoaded', () => {
+            checkSessionExpiration();
+        });
+
+        function checkSessionExpiration() {
+            const loginTime = localStorage.getItem('serverPanel_loginTime');
+            const savedEmail = localStorage.getItem('serverPanel_loggedEmail');
+
+            if (loginTime && savedEmail) {
+                const now = new Date().getTime();
+                // 1시간이 지났는지 검사
+                if (now - parseInt(loginTime) > SESSION_DURATION) {
+                    logout(true); // 1시간 경과로 인한 자동 로그아웃
+                } else {
+                    currentLoggedInEmail = savedEmail;
+                    applyLoginState();
+                }
+            }
+        }
+
+        function applyLoginState() {
+            document.getElementById('loginWrapper').style.display = 'none';
+            
+            if (currentLoggedInEmail === ADMIN_EMAIL) {
+                document.getElementById('globalUserManageMenu').style.display = 'flex';
+                document.getElementById('createServerBtn').style.display = 'block';
+            } else {
+                document.getElementById('globalUserManageMenu').style.display = 'none';
+                document.getElementById('createServerBtn').style.display = 'none';
+            }
+
+            goToServerList();
+        }
+
         function handleLoginKeyPress(e) {
             if (e.key === 'Enter') handleLogin();
         }
@@ -436,33 +478,40 @@
             }
 
             currentLoggedInEmail = email;
-            document.getElementById('loginWrapper').style.display = 'none';
             
-            if (email === ADMIN_EMAIL) {
-                document.getElementById('globalUserManageMenu').style.display = 'flex';
-                document.getElementById('createServerBtn').style.display = 'block';
-            } else {
-                document.getElementById('globalUserManageMenu').style.display = 'none';
-                document.getElementById('createServerBtn').style.display = 'none';
-            }
+            // 로그인 성공 시각 및 이메일 저장 (1시간 세션 관리용)
+            localStorage.setItem('serverPanel_loginTime', new Date().getTime().toString());
+            localStorage.setItem('serverPanel_loggedEmail', email);
 
-            goToServerList();
+            applyLoginState();
         }
 
-        function logout() {
-            if (confirm("로그아웃 하시겠습니까?")) {
+        function logout(isExpired = false) {
+            if (isExpired || confirm("로그아웃 하시겠습니까?")) {
                 if (ws) ws.close();
                 currentServer = null;
+                
+                // 로그인 세션 정보 삭제
+                localStorage.removeItem('serverPanel_loginTime');
+                localStorage.removeItem('serverPanel_loggedEmail');
+
                 document.getElementById('mainPanelWrapper').style.display = 'none';
                 document.getElementById('serverListWrapper').style.display = 'none';
                 document.getElementById('loginWrapper').style.display = 'flex';
                 document.getElementById('loginEmail').value = '';
                 document.getElementById('loginPassword').value = '';
-                document.getElementById('loginErrorMsg').textContent = '';
+                document.getElementById('loginErrorMsg').textContent = isExpired ? "보안을 위해 1시간이 경과하여 자동 로그아웃되었습니다." : "";
             }
         }
 
         function goToServerList() {
+            // 매번 이동하거나 동작할 때 세션 만료 시간 체크
+            const loginTime = localStorage.getItem('serverPanel_loginTime');
+            if (loginTime && (new Date().getTime() - parseInt(loginTime) > SESSION_DURATION)) {
+                logout(true);
+                return;
+            }
+
             if (ws) ws.close();
             document.getElementById('mainPanelWrapper').style.display = 'none';
             document.getElementById('serverListWrapper').style.display = 'flex';
@@ -530,6 +579,13 @@
         }
 
         function openServerPanel(serverId) {
+            // 패널 열 때도 세션 만료 체크
+            const loginTime = localStorage.getItem('serverPanel_loginTime');
+            if (loginTime && (new Date().getTime() - parseInt(loginTime) > SESSION_DURATION)) {
+                logout(true);
+                return;
+            }
+
             currentServer = servers.find(s => s.id === serverId);
             if (!currentServer) return;
 
@@ -755,7 +811,6 @@
                     <span>${email} ${email === ADMIN_EMAIL ? '(기본 관리자)' : ''}</span>
                     <span style="color: #888; font-size:12px;">우클릭하여 관리</span>
                 `;
-                // data 속성 부여하여 우클릭 타겟 식별 안정화
                 row.setAttribute('data-accountemail', email);
                 container.appendChild(row);
             });
