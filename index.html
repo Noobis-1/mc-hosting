@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Server Panel</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- JSZip 라이브러리 (zip 압축용) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -27,12 +26,13 @@
         /* Card Header */
         .card-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 25px 5px 25px; }
         .server-name-box { display: flex; align-items: center; gap: 10px; }
-        .status-dot { width: 14px; height: 14px; background-color: #d4e157; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .status-dot { width: 14px; height: 14px; background-color: #d4e157; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background-color 0.3s; }
         .status-dot i { font-size: 8px; color: #000; margin-left: 1px; }
         .server-title { font-size: 24px; font-weight: 800; color: #ffffff; cursor: pointer; border: none; background: transparent; outline: none; }
         
         .header-actions { display: flex; align-items: center; gap: 15px; color: #ffab00; }
-        .action-btn { background: none; border: none; color: #ffab00; font-size: 16px; cursor: pointer; }
+        .action-btn { background: none; border: none; font-size: 16px; cursor: pointer; }
+        .action-btn.restart { color: #ffab00; }
         .action-btn.power { color: #ff5252; }
 
         /* Navigation Tabs */
@@ -76,6 +76,12 @@
         .file-icon.folder { color: #ffca28; }
         .file-name { font-size: 11px; color: #d4d4d4; text-align: center; word-break: break-all; max-width: 100%; line-height: 1.2; text-overflow: ellipsis; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; pointer-events: none; }
 
+        /* Stats Styles */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-top: 15px; }
+        .stat-card { background-color: #2d2d2d; border: 1px solid #3c3c3c; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
+        .stat-title { font-size: 13px; color: #aaa; display: flex; align-items: center; gap: 8px; }
+        .stat-value { font-size: 28px; font-weight: bold; color: #ffff00; }
+
         /* Custom Context Menu */
         .context-menu { display: none; position: absolute; z-index: 2000; background-color: #2b2b2b; border: 1px solid #444; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); width: 140px; padding: 5px 0; }
         .context-menu-item { display: flex; align-items: center; gap: 8px; padding: 8px 15px; font-size: 12px; color: #ddd; cursor: pointer; }
@@ -92,7 +98,6 @@
 </head>
 <body>
 
-    <!-- Left Sidebar -->
     <div class="sidebar">
         <div class="sidebar-top">
             <i class="fa-solid fa-server"></i> 서버
@@ -103,38 +108,33 @@
         </div>
     </div>
 
-    <!-- Main Container -->
     <div class="main-wrapper">
         <div class="panel-card">
             
-            <!-- Header -->
             <div class="card-header">
                 <div class="server-name-box">
-                    <div class="status-dot"><i class="fa-solid fa-play"></i></div>
+                    <div class="status-dot" id="statusDot"><i class="fa-solid fa-play" id="statusDotIcon"></i></div>
                     <input type="text" id="serverTitle" class="server-title" value="noobis" title="클릭하여 서버 이름 변경">
                 </div>
                 <div class="header-actions">
-                    <button class="action-btn" title="재시작"><i class="fa-solid fa-rotate-right"></i></button>
-                    <button class="action-btn power" title="전원"><i class="fa-solid fa-square"></i></button>
-                    <button class="action-btn" title="더보기"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                    <button class="action-btn restart" title="재시작"><i class="fa-solid fa-rotate-right"></i></button>
+                    <button class="action-btn power" id="powerBtn" onclick="toggleServerPower()" title="서버 정지"><i class="fa-solid fa-square"></i></button>
+                    <button class="action-btn restart" title="더보기"><i class="fa-solid fa-ellipsis-vertical"></i></button>
                 </div>
             </div>
 
-            <!-- Navigation Bar -->
             <div class="nav-tabs">
                 <div class="tab-item" onclick="showTab('console', this)"><i class="fa-solid fa-terminal"></i>콘솔</div>
-                <div class="tab-item" onclick="showTab('stats', this)"><i class="fa-solid fa-chart-line"></i>통계</div>
-                <div class="tab-item active" onclick="showTab('files', this)"><i class="fa-solid fa-file"></i>파일</div>
+                <div class="tab-item active" onclick="showTab('stats', this)"><i class="fa-solid fa-chart-line"></i>통계</div>
+                <div class="tab-item" onclick="showTab('files', this)"><i class="fa-solid fa-file"></i>파일</div>
                 <div class="tab-item" onclick="showTab('settings', this)"><i class="fa-solid fa-gear"></i>설정</div>
                 <div class="tab-item" onclick="showTab('users', this)"><i class="fa-solid fa-users"></i>사용자</div>
                 <div class="tab-item" onclick="showTab('sftp', this)"><i class="fa-solid fa-network-wired"></i>SFTP 정보</div>
                 <div class="tab-item" onclick="showTab('backup', this)"><i class="fa-solid fa-rotate-left"></i>Backup</div>
             </div>
 
-            <!-- Main Content Area -->
             <div class="content-body">
                 
-                <!-- 1. 콘솔 탭 -->
                 <div id="page-console" class="tab-page">
                     <div id="console"></div>
                     <div class="command-bar">
@@ -145,21 +145,40 @@
                     </div>
                 </div>
 
-                <!-- 2. 파일 탭 -->
-                <div id="page-files" class="tab-page active">
+                <div id="page-stats" class="tab-page active">
                     <div class="tab-padded">
-                        
-                        <!-- 서버 탐색기 -->
+                        <h3>📊 실시간 서버 성능 통계</h3>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-title"><i class="fa-solid fa-users"></i> 접속 중인 유저 수</div>
+                                <div class="stat-value" id="statOnlineUsers">0명</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-title"><i class="fa-solid fa-bolt"></i> 실시간 CPS (초당 패킷)</div>
+                                <div class="stat-value" id="statCps">0 CPS</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-title"><i class="fa-solid fa-microchip"></i> CPU 사용량</div>
+                                <div class="stat-value" id="statCpu">0%</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-title"><i class="fa-solid fa-memory"></i> 메모리 사용량</div>
+                                <div class="stat-value" id="statMemory">0 MB</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="page-files" class="tab-page">
+                    <div class="tab-padded">
                         <div class="file-section">
                             <div class="path-bar">
                                 <span id="currentPathDisplay">📂 /</span>
                                 <button class="back-btn" id="backBtn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> 상위 폴더로</button>
                             </div>
-
                             <div class="file-grid" id="fileGrid"></div>
                         </div>
 
-                        <!-- 파일 업로드 -->
                         <div class="file-section">
                             <h3>📤 서버 파일 업로드</h3>
                             <input type="file" id="fileInput" style="margin-top:10px;">
@@ -168,7 +187,6 @@
                             <p id="uploadStatus" style="margin-top: 5px; color: #ffab00; font-size: 12px;"></p>
                         </div>
 
-                        <!-- 파일/폴더 직접 생성 -->
                         <div class="file-section" style="border-bottom: none;">
                             <h3>📝 새 파일 / 폴더 만들기</h3>
                             <input type="text" id="newFileName" class="file-input-text" placeholder="이름 입력 (예: folder_name 또는 config.yml)">
@@ -179,10 +197,8 @@
                     </div>
                 </div>
 
-                <!-- 기타 탭들 -->
                 <div id="page-settings" class="tab-page"><div class="tab-padded"><h3>⚙️ 서버 설정</h3></div></div>
                 <div id="page-users" class="tab-page"><div class="tab-padded"><h3>👥 사용자 관리</h3></div></div>
-                <div id="page-stats" class="tab-page"><div class="tab-padded"><h3>📊 실시간 통계</h3></div></div>
                 <div id="page-sftp" class="tab-page"><div class="tab-padded"><h3>🔌 SFTP 접속 정보</h3></div></div>
                 <div id="page-backup" class="tab-page"><div class="tab-padded"><h3>🔄 백업</h3></div></div>
 
@@ -190,7 +206,6 @@
         </div>
     </div>
 
-    <!-- 우클릭 커스텀 컨텍스트 메뉴 -->
     <div class="context-menu" id="contextMenu">
         <div class="context-menu-item" onclick="renameFile()"><i class="fa-solid fa-pen"></i> 이름 수정</div>
         <div class="context-menu-item" onclick="compressFile()"><i class="fa-solid fa-file-zipper"></i> 압축 (.zip)</div>
@@ -198,7 +213,6 @@
         <div class="context-menu-item danger" onclick="deleteFile()"><i class="fa-solid fa-trash"></i> 삭제</div>
     </div>
 
-    <!-- 파일 열기 모달 팝업창 -->
     <div class="modal" id="fileModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -214,7 +228,6 @@
         const BACKEND_URL = "https://mc-hosting-6fri.onrender.com";
         const WS_URL = "wss://mc-hosting-6fri.onrender.com";
 
-        // 동적 가상 파일 시스템 (기본 루트 항목)
         const virtualFileSystem = {
             "/": [
                 { name: "server.properties", type: "file" },
@@ -230,8 +243,49 @@
         let currentPath = "/";
         let selectedTargetElement = null;
         let selectedFileName = "";
+        let isServerRunning = true; // 서버 전원 상태 변수
 
-        // 탐색기 UI 렌더링
+        // 전원 버튼 토글 함수 (로그/메시지 출력 없음)
+        function toggleServerPower() {
+            isServerRunning = !isServerRunning;
+            const powerBtn = document.getElementById('powerBtn');
+            const statusDot = document.getElementById('statusDot');
+            const statusDotIcon = document.getElementById('statusDotIcon');
+
+            if (isServerRunning) {
+                // 서버 켜짐 상태로 변경
+                powerBtn.innerHTML = '<i class="fa-solid fa-square"></i>';
+                powerBtn.style.color = '#ff5252';
+                powerBtn.title = '서버 정지';
+                statusDot.style.backgroundColor = '#d4e157';
+                statusDotIcon.className = 'fa-solid fa-play';
+            } else {
+                // 서버 꺼짐 상태로 변경 (시작 버튼 아이콘 표시)
+                powerBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+                powerBtn.style.color = '#4caf50';
+                powerBtn.title = '서버 시작';
+                statusDot.style.backgroundColor = '#555';
+                statusDotIcon.className = 'fa-solid fa-power-off';
+            }
+        }
+
+        // 실시간 통계 업데이트 시뮬레이터 (서버가 꺼져있으면 0으로 처리)
+        function updateStats() {
+            if (!isServerRunning) {
+                document.getElementById('statOnlineUsers').textContent = "0명";
+                document.getElementById('statCps').textContent = "0 CPS";
+                document.getElementById('statCpu').textContent = "0%";
+                document.getElementById('statMemory').textContent = "0 MB";
+                return;
+            }
+
+            document.getElementById('statOnlineUsers').textContent = Math.floor(Math.random() * 15) + 1 + "명";
+            document.getElementById('statCps').textContent = (Math.random() * 5 + 10).toFixed(1) + " CPS";
+            document.getElementById('statCpu').textContent = (Math.random() * 20 + 15).toFixed(1) + "%";
+            document.getElementById('statMemory').textContent = Math.floor(Math.random() * 500 + 1200) + " MB";
+        }
+        setInterval(updateStats, 2000);
+
         function renderExplorer() {
             const grid = document.getElementById('fileGrid');
             const pathDisplay = document.getElementById('currentPathDisplay');
@@ -257,7 +311,6 @@
                 
                 card.onclick = () => {
                     if (item.type === 'folder') {
-                        // 경고 알림 없이 즉시 폴더 내부로 이동
                         currentPath = currentPath === "/" ? `/${item.name}` : `${currentPath}/${item.name}`;
                         renderExplorer();
                     } else {
@@ -280,6 +333,7 @@
 
         window.onload = () => {
             renderExplorer();
+            updateStats();
         };
 
         function showTab(tabName, el) {
@@ -298,185 +352,4 @@
 
         function appendLog(text) {
             consoleElem.textContent += text;
-            consoleElem.scrollTop = consoleElem.scrollHeight;
-        }
-
-        function handleKeyPress(e) {
-            if (e.key === 'Enter') sendCommand();
-        }
-
-        function sendCommand() {
-            const input = document.getElementById('cmdInput');
-            if (input.value.trim() !== "") {
-                ws.send(input.value);
-                input.value = "";
-            }
-        }
-
-        function getIconClass(filename) {
-            const ext = filename.split('.').pop().toLowerCase();
-            if (ext === 'jar') return 'fa-solid fa-brands fa-java';
-            if (ext === 'zip') return 'fa-solid fa-file-zipper';
-            if (['json', 'yml', 'yaml', 'properties'].includes(ext)) return 'fa-solid fa-gear';
-            return 'fa-solid fa-file-lines';
-        }
-
-        function openFile(filename) {
-            if (filename.endsWith('.jar')) return alert(`'${filename}' 실행 가능한 바이너리 파일입니다.`);
-
-            document.getElementById('modalTitle').textContent = filename;
-            document.getElementById('modalFileContent').value = localFileCache[filename] || `# ${filename} 내용이 비어있습니다.`;
-            document.getElementById('fileModal').style.display = 'flex';
-        }
-
-        function closeModal() {
-            document.getElementById('fileModal').style.display = 'none';
-        }
-
-        async function saveOpenedFile() {
-            const fileName = document.getElementById('modalTitle').textContent;
-            const content = document.getElementById('modalFileContent').value;
-            localFileCache[fileName] = content;
-
-            const blob = new Blob([content], { type: 'text/plain' });
-            const file = new File([blob], fileName);
-            const formData = new FormData();
-            formData.append('mcFile', file);
-
-            try {
-                await fetch(`${BACKEND_URL}/upload`, { method: 'POST', body: formData });
-                alert(`'${fileName}' 수정 사항이 저장되었습니다.`);
-                closeModal();
-            } catch (err) {
-                alert("저장 실패: " + err.message);
-            }
-        }
-
-        /* --- 우클릭 메뉴 및 기능 --- */
-        const contextMenu = document.getElementById('contextMenu');
-
-        document.addEventListener('contextmenu', (e) => {
-            const card = e.target.closest('.file-card');
-            if (card) {
-                e.preventDefault();
-                selectedTargetElement = card;
-                selectedFileName = card.getAttribute('data-filename');
-
-                contextMenu.style.top = `${e.pageY}px`;
-                contextMenu.style.left = `${e.pageX}px`;
-                contextMenu.style.display = 'block';
-            } else {
-                hideContextMenu();
-            }
-        });
-
-        document.addEventListener('click', () => hideContextMenu());
-
-        function hideContextMenu() {
-            contextMenu.style.display = 'none';
-        }
-
-        function renameFile() {
-            hideContextMenu();
-            if (!selectedFileName) return;
-            const newName = prompt("변경할 이름을 입력하세요:", selectedFileName);
-            if (newName && newName !== selectedFileName) {
-                const list = virtualFileSystem[currentPath];
-                const item = list.find(i => i.name === selectedFileName);
-                if (item) item.name = newName;
-
-                if (localFileCache[selectedFileName]) {
-                    localFileCache[newName] = localFileCache[selectedFileName];
-                    delete localFileCache[selectedFileName];
-                }
-                renderExplorer();
-            }
-        }
-
-        function compressFile() {
-            hideContextMenu();
-            if (!selectedFileName) return;
-            const zipName = `${selectedFileName.split('.')[0]}.zip`;
-            
-            const zip = new JSZip();
-            const content = localFileCache[selectedFileName] || "Binary File Content";
-            zip.file(selectedFileName, content);
-            
-            zip.generateAsync({ type: "blob" }).then(function() {
-                virtualFileSystem[currentPath].push({ name: zipName, type: "file" });
-                renderExplorer();
-                alert(`'${selectedFileName}'이(가) '${zipName}'으로 압축되었습니다.`);
-            });
-        }
-
-        function downloadFile() {
-            hideContextMenu();
-            if (!selectedFileName) return;
-            const content = localFileCache[selectedFileName] || "";
-            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = selectedFileName;
-            link.click();
-            URL.revokeObjectURL(link.href);
-        }
-
-        function deleteFile() {
-            hideContextMenu();
-            if (!selectedFileName) return;
-            if (confirm(`정말로 '${selectedFileName}'을(를) 삭제하시겠습니까?`)) {
-                virtualFileSystem[currentPath] = virtualFileSystem[currentPath].filter(i => i.name !== selectedFileName);
-                delete localFileCache[selectedFileName];
-                renderExplorer();
-            }
-        }
-
-        // Upload File
-        async function uploadFile() {
-            const fileInput = document.getElementById('fileInput');
-            const status = document.getElementById('uploadStatus');
-            if (fileInput.files.length === 0) return alert("파일을 선택하세요.");
-
-            const file = fileInput.files[0];
-            const formData = new FormData();
-            formData.append('mcFile', file);
-
-            status.textContent = "업로드 중...";
-            try {
-                const res = await fetch(`${BACKEND_URL}/upload`, { method: 'POST', body: formData });
-                const data = await res.json();
-                status.textContent = data.message;
-                
-                virtualFileSystem[currentPath].push({ name: file.name, type: "file" });
-                renderExplorer();
-            } catch (err) {
-                status.textContent = "업로드 실패: " + err.message;
-            }
-        }
-
-        // Create File or Folder (확장자가 없으면 폴더로 생성)
-        async function createFileOrFolder() {
-            const inputName = document.getElementById('newFileName').value.trim();
-            const content = document.getElementById('newFileContent').value;
-            const status = document.getElementById('createStatus');
-
-            if (!inputName) return alert("이름을 입력해주세요.");
-
-            const isFolder = !inputName.includes('.');
-            const itemType = isFolder ? "folder" : "file";
-
-            if (!isFolder) {
-                localFileCache[inputName] = content;
-            }
-
-            virtualFileSystem[currentPath].push({ name: inputName, type: itemType });
-            renderExplorer();
-
-            status.textContent = `'${inputName}' ${isFolder ? '폴더' : '파일'}가 정상적으로 생성되었습니다!`;
-
-            document.getElementById('newFileName').value = '';
-            document.getElementById('newFileContent').value = '';
-        }
-    </script>
-</body>
-</html>
+            console
