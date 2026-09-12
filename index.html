@@ -26,12 +26,14 @@
         /* Card Header */
         .card-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 25px 5px 25px; }
         .server-name-box { display: flex; align-items: center; gap: 10px; }
-        .status-dot { width: 14px; height: 14px; background-color: #d4e157; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .status-dot { width: 14px; height: 14px; background-color: #d4e157; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background-color 0.3s; }
+        .status-dot.offline { background-color: #ff5252; }
         .status-dot i { font-size: 8px; color: #000; margin-left: 1px; }
-        .server-title { font-size: 24px; font-weight: 800; color: #ffffff; cursor: pointer; border: none; background: transparent; outline: none; }
+        .server-title { font-size: 24px; font-weight: 800; color: #ffffff; cursor: pointer; border: none; background: transparent; outline: none; width: 250px; }
         
         .header-actions { display: flex; align-items: center; gap: 15px; }
-        .action-btn { background: none; border: none; font-size: 16px; cursor: pointer; }
+        .action-btn { background: none; border: none; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .action-btn.start { color: #4caf50; display: none; font-size: 18px; }
         .action-btn.restart { color: #ffab00; }
         .action-btn.power { color: #ff5252; }
 
@@ -118,10 +120,11 @@
             <div class="card-header">
                 <div class="server-name-box">
                     <div class="status-dot" id="statusDot"><i class="fa-solid fa-play" id="statusDotIcon"></i></div>
-                    <input type="text" id="serverTitle" class="server-title" value="noobis" title="클릭하여 서버 이름 변경">
+                    <input type="text" id="serverTitle" class="server-title" value="noobis" title="클릭하여 서버 이름 변경" oninput="syncServerTitle(this.value)">
                 </div>
                 <div class="header-actions">
-                    <button class="action-btn restart" onclick="restartServer()" title="재시작"><i class="fa-solid fa-rotate-right"></i></button>
+                    <button class="action-btn start" id="startBtn" onclick="startServer()" title="서버 시작"><i class="fa-solid fa-play"></i></button>
+                    <button class="action-btn restart" id="restartBtn" onclick="restartServer()" title="재시작"><i class="fa-solid fa-rotate-right"></i></button>
                     <button class="action-btn power" id="powerBtn" onclick="stopServer()" title="서버 정지"><i class="fa-solid fa-square"></i></button>
                     <button class="action-btn restart" title="더보기"><i class="fa-solid fa-ellipsis-vertical"></i></button>
                 </div>
@@ -155,19 +158,19 @@
                         <div class="stats-grid">
                             <div class="stat-card">
                                 <div class="stat-title"><i class="fa-solid fa-users"></i> 접속 중인 유저 수</div>
-                                <div class="stat-value" id="statOnlineUsers">5명</div>
+                                <div class="stat-value" id="statOnlineUsers">0명</div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-title"><i class="fa-solid fa-bolt"></i> 실시간 CPS (초당 패킷)</div>
-                                <div class="stat-value" id="statCps">10.9 CPS</div>
+                                <div class="stat-value" id="statCps">0.0 CPS</div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-title"><i class="fa-solid fa-microchip"></i> CPU 사용량</div>
-                                <div class="stat-value" id="statCpu">24.4%</div>
+                                <div class="stat-value" id="statCpu">0.0%</div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-title"><i class="fa-solid fa-memory"></i> 메모리 사용량</div>
-                                <div class="stat-value" id="statMemory">1380 MB</div>
+                                <div class="stat-value" id="statMemory">0 MB</div>
                             </div>
                         </div>
                     </div>
@@ -206,7 +209,7 @@
                         <div class="section-box">
                             <h3>⚙️ 서버 기본 설정</h3>
                             <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">서버 이름</label>
-                            <input type="text" id="settingServerName" class="input-text" value="noobis">
+                            <input type="text" id="settingServerName" class="input-text" value="noobis" oninput="syncServerTitle(this.value)">
                             
                             <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">마크 버전 (직접 입력)</label>
                             <input type="text" id="settingServerVersion" class="input-text" placeholder="예: 26.2" value="26.2">
@@ -241,7 +244,7 @@
                             <h3>📋 권한이 있는 사용자 목록</h3>
                             <div id="userListContainer" style="margin-top: 10px;">
                                 <div class="user-row">
-                                    <span>admin@noobis.com (관리자)</span>
+                                    <span>syhblack1@gmail.com (관리자)</span>
                                     <span style="color: #888; font-size:12px;">기본 관리자</span>
                                 </div>
                             </div>
@@ -299,25 +302,17 @@
         const BACKEND_URL = "https://mc-hosting-6fri.onrender.com";
         const WS_URL = "wss://mc-hosting-6fri.onrender.com";
 
-        const virtualFileSystem = {
-            "/": [
-                { name: "server.properties", type: "file" },
-                { name: "ops.json", type: "file" }
-            ]
+        // 처음에 완벽히 비워둔 파일 시스템
+        let virtualFileSystem = {
+            "/": []
         };
 
-        const localFileCache = {
-            "server.properties": "server-port=25565\neula=true\nmotd=A Minecraft Server\nmax-players=20",
-            "ops.json": "[\n  {\n    \"uuid\": \"00000000-0000-0000-0000-000000000000\",\n    \"name\": \"Admin\",\n    \"level\": 4\n  }\n]"
-        };
+        let localFileCache = {};
 
-        let backupList = [
-            { name: "backup_2026-06-06.zip", date: "2026-06-06 12:00" }
-        ];
+        // 백업 데이터 저장소 (내부에 실제 파일 상태를 백업할 수 있도록 구조 고도화)
+        let backupList = [];
 
-        let authorizedUsers = [
-            "developer@noobis.com"
-        ];
+        let authorizedUsers = [];
 
         let currentPath = "/";
         let selectedTargetElement = null;
@@ -328,50 +323,97 @@
         const ws = new WebSocket(WS_URL);
 
         ws.onopen = () => { appendLog("[SYSTEM] 백엔드 콘솔 스트림에 연결되었습니다.\n"); };
-        ws.onmessage = (event) => { appendLog(event.data); };
+        ws.onmessage = (event) => { 
+            const msg = event.data;
+            appendLog(msg);
+            
+            if (msg.includes("Stopping the server") || msg.includes("Server stopped")) {
+                setServerState(false);
+            } else if (msg.includes("Done") || msg.includes("Running")) {
+                setServerState(true);
+            }
+        };
 
         function appendLog(text) {
             consoleElem.textContent += text;
             consoleElem.scrollTop = consoleElem.scrollHeight;
         }
 
-        // 실제 서버 정지 명령 전송 (추후 CMD 연결용)
+        // 서버 이름 실시간 동기화 함수
+        function syncServerTitle(val) {
+            document.getElementById('serverTitle').value = val;
+            document.getElementById('settingServerName').value = val;
+        }
+
+        function setServerState(isRunning) {
+            const statusDot = document.getElementById('statusDot');
+            const statusDotIcon = document.getElementById('statusDotIcon');
+            const startBtn = document.getElementById('startBtn');
+            const restartBtn = document.getElementById('restartBtn');
+            const powerBtn = document.getElementById('powerBtn');
+
+            if (isRunning) {
+                statusDot.classList.remove('offline');
+                statusDot.style.backgroundColor = '#d4e157';
+                statusDotIcon.style.display = 'block';
+                
+                startBtn.style.display = 'none';
+                restartBtn.style.display = 'flex';
+                powerBtn.style.display = 'flex';
+            } else {
+                statusDot.classList.add('offline');
+                statusDot.style.backgroundColor = '#ff5252';
+                statusDotIcon.style.display = 'none';
+                
+                startBtn.style.display = 'flex';
+                restartBtn.style.display = 'none';
+                powerBtn.style.display = 'none';
+            }
+        }
+
+        function startServer() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send("start");
+                appendLog("[SYSTEM] 서버 시작 명령을 전송했습니다.\n");
+                setServerState(true);
+            } else {
+                appendLog("[SYSTEM] 서버에 연결되어 있지 않습니다.\n");
+            }
+        }
+
         function stopServer() {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send("stop");
+                appendLog("[SYSTEM] 서버 정지 명령을 전송했습니다.\n");
+                setServerState(false);
             } else {
                 appendLog("[SYSTEM] 서버에 연결되어 있지 않아 정지 명령을 보낼 수 없습니다.\n");
             }
         }
 
-        // 실제 서버 재시작 명령 전송 (추후 CMD 연결용)
         function restartServer() {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send("restart");
+                appendLog("[SYSTEM] 서버 재시작 명령을 전송했습니다.\n");
             } else {
                 appendLog("[SYSTEM] 서버에 연결되어 있지 않아 재시작 명령을 보낼 수 없습니다.\n");
             }
         }
 
-        // 서버 재설치 기능 ("하겠습니다?" 확인 창)
         function reinstallServer() {
             const confirm1 = confirm("정말로 서버를 재설치하시겠습니까? 모든 파일이 초기화됩니다.");
             if (confirm1) {
                 const confirm2 = confirm("정말 모든 데이터를 지우고 초기화하겠습니다?");
                 if (confirm2) {
-                    virtualFileSystem["/"] = [
-                        { name: "server.properties", type: "file" },
-                        { name: "ops.json", type: "file" }
-                    ];
-                    localFileCache["server.properties"] = "server-port=25565\neula=true\nmotd=New Initialized Server";
-                    localFileCache["ops.json"] = "[]";
+                    virtualFileSystem = { "/": [] };
+                    localFileCache = {};
+                    currentPath = "/";
                     renderExplorer();
                     alert("서버가 성공적으로 재설치(초기화)되었습니다.");
                 }
             }
         }
 
-        // 사용자 추가 기능 (이메일)
         function addUser() {
             const emailInput = document.getElementById('userEmailInput');
             const email = emailInput.value.trim();
@@ -399,7 +441,7 @@
             const container = document.getElementById('userListContainer');
             container.innerHTML = `
                 <div class="user-row">
-                    <span>admin@noobis.com (관리자)</span>
+                    <span>syhblack1@gmail.com (관리자)</span>
                     <span style="color: #888; font-size:12px;">기본 관리자</span>
                 </div>
             `;
@@ -414,10 +456,19 @@
             });
         }
 
+        // 백업 저장 (현재 파일 시스템 상태를 통째로 스냅샷 복사하여 저장)
         function createBackup() {
             const dateStr = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
             const backupName = `backup_${dateStr}.zip`;
-            backupList.push({ name: backupName, date: new Date().toLocaleString() });
+            
+            // 현재 가상 파일 시스템과 파일 캐시를 깊은 복사(Deep Copy)하여 백업에 보존
+            backupList.push({ 
+                name: backupName, 
+                date: new Date().toLocaleString(),
+                fs: JSON.parse(JSON.stringify(virtualFileSystem)),
+                cache: JSON.parse(JSON.stringify(localFileCache))
+            });
+
             renderBackups();
             alert(`서버 파일 백업 '${backupName}'이(가) 완료되었습니다.`);
         }
@@ -440,16 +491,26 @@
             });
         }
 
+        // 백업 불러오기 (해당 백업의 파일 시스템 상태로 원복)
         function restoreBackup() {
             hideAllContextMenus();
-            if (confirm(`'${selectedBackupName}' 백업본으로 서버 파일을 복구(불러오기)하시겠습니까?`)) {
-                alert("성공적으로 복구되었습니다.");
+            const targetBackup = backupList.find(b => b.name === selectedBackupName);
+            if (!targetBackup) return alert("백업 파일을 찾을 수 없습니다.");
+
+            if (confirm(`'${selectedBackupName}' 백업본으로 서버 파일을 복구(불러오기)하시겠습니까? 현재 파일이 백업 시점의 파일로 덮어씌워집니다.`)) {
+                virtualFileSystem = JSON.parse(JSON.stringify(targetBackup.fs));
+                localFileCache = JSON.parse(JSON.stringify(targetBackup.cache));
+                currentPath = "/";
+                renderExplorer();
+                alert("백업 파일이 성공적으로 불러와졌습니다.");
             }
         }
 
         function downloadBackup() {
             hideAllContextMenus();
-            const blob = new Blob([`Dummy Backup Archive Content for ${selectedBackupName}`], { type: 'application/zip' });
+            const targetBackup = backupList.find(b => b.name === selectedBackupName);
+            const content = targetBackup ? JSON.stringify(targetBackup.fs, null, 2) : "Backup Archive Content";
+            const blob = new Blob([content], { type: 'application/zip' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = selectedBackupName;
@@ -465,11 +526,13 @@
             }
         }
 
+        // 통계 0으로 유지 (서버가 시작되면 수치가 올라갈 수 있도록 구성하되 기본값 0)
         function updateStats() {
-            document.getElementById('statOnlineUsers').textContent = (Math.floor(Math.random() * 5) + 3) + "명";
-            document.getElementById('statCps').textContent = (Math.random() * 2 + 10).toFixed(1) + " CPS";
-            document.getElementById('statCpu').textContent = (Math.random() * 5 + 22).toFixed(1) + "%";
-            document.getElementById('statMemory').textContent = Math.floor(Math.random() * 50 + 1350) + " MB";
+            // 서버가 정지 상태일 때는 0 유지, 켜져있을 때만 수치 변화 등 확장 가능하도록 설정
+            document.getElementById('statOnlineUsers').textContent = "0명";
+            document.getElementById('statCps').textContent = "0.0 CPS";
+            document.getElementById('statCpu').textContent = "0.0%";
+            document.getElementById('statMemory').textContent = "0 MB";
         }
         setInterval(updateStats, 2000);
 
@@ -523,6 +586,7 @@
             renderBackups();
             renderUserList();
             updateStats();
+            setServerState(true);
         };
 
         function showTab(tabName, el) {
