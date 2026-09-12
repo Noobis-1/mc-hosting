@@ -73,7 +73,14 @@ wss.on('connection', (ws) => {
                 return;
             }
 
-            // 자바 프로세스 실행
+            // 서버 실행 시 eula.txt가 없으면 자동으로 동의 파일 생성
+            const eulaPath = path.join(MC_DIR, 'eula.txt');
+            if (!fs.existsSync(eulaPath)) {
+                fs.writeFileSync(eulaPath, 'eula=true\n');
+                ws.send('[SYSTEM] eula.txt 파일이 자동으로 생성되었습니다.\r\n');
+            }
+
+            // 자바 프로세스 실행 (Paper 서버 구동 및 기본 파일들 자동 생성)
             mcProcess = spawn('java', ['-Xmx1024M', '-Xms1024M', '-jar', 'server.jar', 'nogui'], {
                 cwd: MC_DIR,
                 shell: true
