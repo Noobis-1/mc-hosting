@@ -276,6 +276,9 @@
                                 <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">서버 이름</label>
                                 <input type="text" id="settingServerName" class="input-text" value="" oninput="syncServerTitle(this.value)">
                                 
+                                <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">램 할당량 (예: 4GB, 2048MB)</label>
+                                <input type="text" id="settingServerRam" class="input-text" placeholder="예: 4GB" value="4GB">
+
                                 <label style="font-size:12px; color:#aaa; display:block; margin-top:10px;">마크 버전 (직접 입력)</label>
                                 <input type="text" id="settingServerVersion" class="input-text" placeholder="예: 26.2" value="26.2">
 
@@ -530,6 +533,7 @@
                         <span class="server-card-name">${srv.name}</span>
                         <div class="server-card-status ${srv.running ? '' : 'offline'}"></div>
                     </div>
+                    <div style="font-size:12px; color:#888;">RAM: ${srv.ram || '4GB'}</div>
                 `;
                 grid.appendChild(card);
             });
@@ -541,6 +545,8 @@
             if (servers.some(s => s.id === srvName)) {
                 return alert("이미 존재하는 서버 이름입니다.");
             }
+            const srvRam = prompt("할당할 램(RAM) 용량을 입력하세요 (예: 2GB, 4GB):", "4GB");
+            if (!srvRam) return;
 
             servers.push({
                 id: srvName,
@@ -549,6 +555,7 @@
                 logHistory: "",
                 version: "26.2",
                 javaVersion: "java 25",
+                ram: srvRam,
                 users: [ADMIN_EMAIL],
                 fs: { "/": [] },
                 cache: {},
@@ -556,7 +563,7 @@
             });
             saveServersToStorage();
             renderServerCardGrid();
-            alert(`서버 '${srvName}'이(가) 추가되었습니다.`);
+            alert(`서버 '${srvName}' (RAM: ${srvRam})이(가) 추가되었습니다.`);
         }
 
         function deleteServerItem() {
@@ -584,6 +591,7 @@
 
             document.getElementById('serverTitle').value = currentServer.name;
             document.getElementById('settingServerName').value = currentServer.name;
+            document.getElementById('settingServerRam').value = currentServer.ram || "4GB";
             document.getElementById('settingServerVersion').value = currentServer.version || "26.2";
             document.getElementById('settingJavaVersion').value = currentServer.javaVersion || "java 25";
 
@@ -690,6 +698,7 @@
 
         function saveServerSettings() {
             if (!currentServer) return;
+            currentServer.ram = document.getElementById('settingServerRam').value;
             currentServer.version = document.getElementById('settingServerVersion').value;
             currentServer.javaVersion = document.getElementById('settingJavaVersion').value;
             saveServersToStorage();
@@ -1145,38 +1154,26 @@
             if (!selectedFileName) return;
 
             try {
-                // 가상 캐시에 저장된 파일 내용(텍스트 형태의 ZIP 가상 데이터 또는 실제 Blob/ArrayBuffer) 가져오기
                 let fileContent = currentServer.cache[selectedFileName];
-                
-                // 만약 실제 파일 업로드 객체나 바이너리가 아니라 텍스트 상태라면 빈 JSZip으로 테스트 구조 생성 혹은 처리
                 const zip = new JSZip();
-                
-                // 시뮬레이션 환경에 맞춰 내용이 문자열일 경우 변환, 혹은 빈 압축파일일 경우 기본 샘플 파일 추출 처리
                 let zipData = fileContent || "";
                 
-                // JSZip으로 읽어오기 시도 (가상 에뮬레이션 환경 대응)
-                // 만약 캐시에 실제 압축 바이너리가 없다면 기본 가상 파일들을 풀어주는 예외 처리
                 let loadedZip;
                 try {
                     loadedZip = await zip.loadAsync(zipData);
-                } catch (err) {
-                    // 실제 바이너리가 아닐 경우를 대비한 가상 압축 해제 처리 (예시: 압축 파일 이름에서 확장자 뺀 폴더 생성 후 샘플 파일 생성)
-                }
+                } catch (err) {}
 
-                const folderName = selectedFileName.replace(/\.[^/.]+$/, ""); // 확장자 제거한 폴더명
+                const folderName = selectedFileName.replace(/\.[^/.]+$/, "");
                 const targetFolderPath = currentPath === "/" ? `/${folderName}` : `${currentPath}/${folderName}`;
 
-                // 가상 파일 시스템에 폴더 생성
                 if (!currentServer.fs[targetFolderPath]) {
                     currentServer.fs[targetFolderPath] = [];
                 }
 
-                // 현재 경로(currentPath)의 파일 리스트에 폴더 추가 (중복 방지 체크)
                 if (!currentServer.fs[currentPath].some(i => i.name === folderName && i.type === 'folder')) {
                     currentServer.fs[currentPath].push({ name: folderName, type: "folder" });
                 }
 
-                // JSZip 내부 파일들을 순회하며 가상 파일 시스템에 풀기
                 if (loadedZip && Object.keys(loadedZip.files).length > 0) {
                     for (let relativePath in loadedZip.files) {
                         let zipEntry = loadedZip.files[relativePath];
@@ -1192,7 +1189,6 @@
                         }
                     }
                 } else {
-                    // 가상 압축 파일일 경우 기본 샘플 파일 생성
                     const sampleFileName = "extracted_config.yml";
                     currentServer.cache[sampleFileName] = "# Extracted from " + selectedFileName + "\nsetting: true";
                     currentServer.fs[targetFolderPath].push({ name: sampleFileName, type: "file" });
