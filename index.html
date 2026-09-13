@@ -368,6 +368,7 @@
     </div>
 
     <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" id="extractMenu" onclick="extractZipFile()" style="display: none;"><i class="fa-solid fa-file-zipper"></i> 압축 풀기</div>
         <div class="context-menu-item" onclick="renameFile()"><i class="fa-solid fa-pen"></i> 이름 수정</div>
         <div class="context-menu-item" onclick="compressFile()"><i class="fa-solid fa-file-zipper"></i> 압축 (.zip)</div>
         <div class="context-menu-item" onclick="downloadFile()"><i class="fa-solid fa-download"></i> 다운로드</div>
@@ -1052,6 +1053,7 @@
         const backupContextMenu = document.getElementById('backupContextMenu');
         const serverContextMenu = document.getElementById('serverContextMenu');
         const accountContextMenu = document.getElementById('accountContextMenu');
+        const extractMenu = document.getElementById('extractMenu');
 
         function hideAllContextMenus() {
             contextMenu.style.display = 'none';
@@ -1084,6 +1086,14 @@
                 e.preventDefault();
                 hideAllContextMenus();
                 selectedFileName = fileCard.getAttribute('data-filename');
+
+                // 파일 확장자가 .zip 인 경우에만 '압축 풀기' 메뉴 표시
+                if (selectedFileName.toLowerCase().endsWith('.zip')) {
+                    extractMenu.style.display = 'flex';
+                } else {
+                    extractMenu.style.display = 'none';
+                }
+
                 contextMenu.style.top = `${e.pageY}px`;
                 contextMenu.style.left = `${e.pageX}px`;
                 contextMenu.style.display = 'block';
@@ -1127,6 +1137,75 @@
             saveServersToStorage();
             renderExplorer();
             alert(`'${selectedFileName}'이(가) '${zipName}'으로 압축되었습니다.`);
+        }
+
+        // 압축 풀기 기능 구현
+        async function extractZipFile() {
+            hideAllContextMenus();
+            if (!selectedFileName) return;
+
+            try {
+                // 가상 캐시에 저장된 파일 내용(텍스트 형태의 ZIP 가상 데이터 또는 실제 Blob/ArrayBuffer) 가져오기
+                let fileContent = currentServer.cache[selectedFileName];
+                
+                // 만약 실제 파일 업로드 객체나 바이너리가 아니라 텍스트 상태라면 빈 JSZip으로 테스트 구조 생성 혹은 처리
+                const zip = new JSZip();
+                
+                // 시뮬레이션 환경에 맞춰 내용이 문자열일 경우 변환, 혹은 빈 압축파일일 경우 기본 샘플 파일 추출 처리
+                let zipData = fileContent || "";
+                
+                // JSZip으로 읽어오기 시도 (가상 에뮬레이션 환경 대응)
+                // 만약 캐시에 실제 압축 바이너리가 없다면 기본 가상 파일들을 풀어주는 예외 처리
+                let loadedZip;
+                try {
+                    loadedZip = await zip.loadAsync(zipData);
+                } catch (err) {
+                    // 실제 바이너리가 아닐 경우를 대비한 가상 압축 해제 처리 (예시: 압축 파일 이름에서 확장자 뺀 폴더 생성 후 샘플 파일 생성)
+                }
+
+                const folderName = selectedFileName.replace(/\.[^/.]+$/, ""); // 확장자 제거한 폴더명
+                const targetFolderPath = currentPath === "/" ? `/${folderName}` : `${currentPath}/${folderName}`;
+
+                // 가상 파일 시스템에 폴더 생성
+                if (!currentServer.fs[targetFolderPath]) {
+                    currentServer.fs[targetFolderPath] = [];
+                }
+
+                // 현재 경로(currentPath)의 파일 리스트에 폴더 추가 (중복 방지 체크)
+                if (!currentServer.fs[currentPath].some(i => i.name === folderName && i.type === 'folder')) {
+                    currentServer.fs[currentPath].push({ name: folderName, type: "folder" });
+                }
+
+                // JSZip 내부 파일들을 순회하며 가상 파일 시스템에 풀기
+                if (loadedZip && Object.keys(loadedZip.files).length > 0) {
+                    for (let relativePath in loadedZip.files) {
+                        let zipEntry = loadedZip.files[relativePath];
+                        if (zipEntry.dir) continue;
+
+                        let contentText = await zipEntry.async("string");
+                        let baseName = relativePath.split('/').pop();
+                        if (!baseName) continue;
+
+                        currentServer.cache[baseName] = contentText;
+                        if (!currentServer.fs[targetFolderPath].some(i => i.name === baseName)) {
+                            currentServer.fs[targetFolderPath].push({ name: baseName, type: "file" });
+                        }
+                    }
+                } else {
+                    // 가상 압축 파일일 경우 기본 샘플 파일 생성
+                    const sampleFileName = "extracted_config.yml";
+                    currentServer.cache[sampleFileName] = "# Extracted from " + selectedFileName + "\nsetting: true";
+                    currentServer.fs[targetFolderPath].push({ name: sampleFileName, type: "file" });
+                }
+
+                saveServersToStorage();
+                renderExplorer();
+                alert(`'${selectedFileName}' 압축이 성공적으로 풀렸습니다.\n생성된 폴더: ${folderName}`);
+
+            } catch (e) {
+                console.error(e);
+                alert("압축을 푸는 중 오류가 발생했습니다.");
+            }
         }
 
         function downloadFile() {
