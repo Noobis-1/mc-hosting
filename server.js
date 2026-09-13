@@ -24,8 +24,9 @@ if (!fs.existsSync(MC_DIR)) {
 }
 console.log('현재 설정된 마인크래프트 서버 폴더 경로:', MC_DIR);
 
+// 루트 주소로 접속하면 index.html 파일을 화면에 띄워줍니다.
 app.get('/', (req, res) => {
-    res.send('마인크래프트 호스팅 백엔드 서버 작동 중!');
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // 파일 업로드 처리
